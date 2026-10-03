@@ -1,0 +1,1021 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Servis">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<title>Servisní záznamy</title>
+<script>
+// Diagnostika: jakákoliv chyba při spuštění se vypíše přímo na stránku
+window.__chyby = [];
+function __ukazChybu(text) {
+  window.__chyby.push(text);
+  var box = document.getElementById("diag");
+  if (!box) return;
+  box.classList.remove("skryto");
+  box.textContent = "⚠️ Chyba aplikace (pošli ji Claudovi):\n\n" + window.__chyby.join("\n\n");
+}
+window.addEventListener("error", function (e) {
+  if (e.target && e.target !== window) {
+    if (e.target.tagName === "SCRIPT") __ukazChybu("Nepodařilo se načíst skript: " + e.target.src);
+  } else {
+    __ukazChybu((e.message || "Neznámá chyba") + (e.lineno ? "  [řádek " + e.lineno + ", sloupec " + e.colno + "]" : ""));
+  }
+}, true);
+document.addEventListener("DOMContentLoaded", function () {
+  if (window.__chyby.length) __ukazChybu(window.__chyby.pop());
+});
+</script>
+<style>
+:root {
+  --bg: #f2f2f7;
+  --card: #ffffff;
+  --sheet-bg: #f2f2f7;
+  --sheet-card: #ffffff;
+  --label: #000000;
+  --label2: rgba(60, 60, 67, .6);
+  --label3: rgba(60, 60, 67, .3);
+  --sep: rgba(60, 60, 67, .29);
+  --fill: rgba(118, 118, 128, .12);
+  --fill2: rgba(118, 118, 128, .2);
+  --seg-on: #ffffff;
+  --nav: rgba(249, 249, 249, .88);
+  --blue: #007aff;
+  --red: #ff3b30;
+  --orange: #ff9500;
+  --green: #34c759;
+  --switch-off: #e9e9eb;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000;
+    --card: #1c1c1e;
+    --sheet-bg: #1c1c1e;
+    --sheet-card: #2c2c2e;
+    --label: #ffffff;
+    --label2: rgba(235, 235, 245, .6);
+    --label3: rgba(235, 235, 245, .3);
+    --sep: rgba(84, 84, 88, .65);
+    --fill: rgba(118, 118, 128, .24);
+    --fill2: rgba(118, 118, 128, .32);
+    --seg-on: #636366;
+    --nav: rgba(22, 22, 24, .86);
+    --blue: #0a84ff;
+    --red: #ff453a;
+    --orange: #ff9f0a;
+    --green: #30d158;
+    --switch-off: #39393d;
+  }
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, sans-serif;
+  font-size: 17px;
+  line-height: 1.29;
+  color: var(--label);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  min-height: 100vh;
+}
+body.zamceno { overflow: hidden; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+input, textarea { font: inherit; color: inherit; }
+.skryto { display: none !important; }
+
+/* ---------- navigační lišta ---------- */
+.nav {
+  position: sticky; top: 0; z-index: 20;
+  padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+  background: var(--nav);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: .5px solid transparent;
+  transition: border-color .2s;
+}
+.nav.stin { border-bottom-color: var(--sep); }
+.nav-radek { height: 44px; display: flex; align-items: center; justify-content: space-between; position: relative; }
+.nav-titul {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  font-weight: 600; opacity: 0; transition: opacity .2s; pointer-events: none; white-space: nowrap;
+}
+.nav.stin .nav-titul { opacity: 1; }
+.nav-btn { color: var(--blue); font-size: 17px; padding: 8px 0; min-width: 44px; display: flex; align-items: center; gap: 4px; }
+.nav-btn:active { opacity: .4; }
+.nav-btn.vpravo { justify-content: flex-end; }
+.nav-btn svg { width: 22px; height: 22px; }
+
+.obsah {
+  padding: 0 max(16px, env(safe-area-inset-right)) calc(32px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  max-width: 720px; margin: 0 auto;
+}
+.velky-titul { font-size: 34px; font-weight: 700; letter-spacing: .37px; margin: 2px 0 10px; }
+
+/* ---------- vyhledávání ---------- */
+.hledani {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--fill); border-radius: 10px; height: 36px; padding: 0 8px;
+}
+.hledani svg { width: 17px; height: 17px; flex: none; color: var(--label2); }
+.hledani input { flex: 1; border: 0; outline: 0; background: transparent; font-size: 17px; min-width: 0; }
+.hledani input::placeholder { color: var(--label2); }
+.hledani input::-webkit-search-cancel-button { display: none; }
+.vymazat { width: 20px; height: 20px; border-radius: 50%; background: var(--label3); color: var(--card); display: grid; place-items: center; flex: none; }
+.vymazat svg { width: 10px; height: 10px; color: var(--bg); }
+
+/* ---------- segmentové ovládání ---------- */
+.segment {
+  display: flex; background: var(--fill); border-radius: 9px; padding: 2px; margin-top: 10px;
+  overflow-x: auto; scrollbar-width: none;
+}
+.segment::-webkit-scrollbar { display: none; }
+.segment button {
+  flex: 1 0 auto; padding: 6px 10px; font-size: 13px; font-weight: 500; border-radius: 7px; white-space: nowrap;
+  transition: background .15s;
+}
+.segment button.on { background: var(--seg-on); font-weight: 600; box-shadow: 0 3px 8px rgba(0,0,0,.12), 0 3px 1px rgba(0,0,0,.04); }
+
+.pilulky { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.pilulka {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: 16px; background: var(--fill); font-size: 15px;
+}
+.pilulka svg { width: 15px; height: 15px; }
+.pilulka.on { background: var(--blue); color: #fff; }
+
+/* ---------- souhrn ---------- */
+.souhrn {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  background: var(--card); border-radius: 10px; margin-top: 16px; overflow: hidden;
+}
+.souhrn div { padding: 10px 12px; }
+.souhrn div + div { border-left: .5px solid var(--sep); }
+.souhrn small { display: block; font-size: 12px; color: var(--label2); text-transform: uppercase; letter-spacing: .2px; }
+.souhrn b { display: block; font-size: 20px; font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+/* ---------- seznam ---------- */
+.sekce-hlavicka {
+  font-size: 13px; color: var(--label2); text-transform: uppercase; letter-spacing: -.08px;
+  padding: 22px 16px 7px;
+}
+.skupina { background: var(--card); border-radius: 10px; overflow: hidden; }
+.bunka {
+  display: flex; align-items: flex-start; gap: 10px; width: 100%; text-align: left;
+  padding: 11px 16px 11px 16px; position: relative;
+}
+.bunka:active { background: var(--fill2); }
+.bunka + .bunka::before {
+  content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: .5px solid var(--sep);
+}
+.bunka-telo { flex: 1; min-width: 0; }
+.bunka-r1 { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.bunka-nazev { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bunka-datum { font-size: 15px; color: var(--label2); flex: none; font-variant-numeric: tabular-nums; }
+.bunka-r2 { font-size: 15px; color: var(--label); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bunka-r3 {
+  font-size: 15px; color: var(--label2); margin-top: 2px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.znacky { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; font-size: 13px; color: var(--label2); }
+.znacky span { display: inline-flex; align-items: center; gap: 3px; }
+.znacky svg { width: 13px; height: 13px; }
+.znacky .varovani { color: var(--orange); font-weight: 600; }
+.sipka { color: var(--label3); flex: none; align-self: center; }
+.sipka svg { width: 8px; height: 13px; display: block; }
+
+.prazdno { text-align: center; color: var(--label2); padding: 60px 20px; }
+.prazdno svg { width: 48px; height: 48px; color: var(--label3); margin-bottom: 10px; }
+.prazdno b { display: block; color: var(--label); font-size: 20px; margin-bottom: 4px; }
+
+/* ---------- přihlášení ---------- */
+#prihlaseni { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 24px max(16px, env(safe-area-inset-left)); max-width: 440px; margin: 0 auto; }
+.logo { width: 76px; height: 76px; border-radius: 18px; margin: 0 auto 14px; display: block; box-shadow: 0 4px 14px rgba(0,0,0,.12); }
+#prihlaseni h1 { text-align: center; font-size: 28px; margin: 0 0 4px; }
+#prihlaseni p.pod { text-align: center; color: var(--label2); margin: 0 0 26px; font-size: 15px; }
+.chyba { color: var(--red); font-size: 15px; text-align: center; min-height: 20px; margin-top: 10px; }
+.velke-tlacitko {
+  width: 100%; height: 50px; border-radius: 12px; background: var(--blue); color: #fff;
+  font-size: 17px; font-weight: 600; margin-top: 20px;
+}
+.velke-tlacitko:active { opacity: .7; }
+.velke-tlacitko:disabled { opacity: .5; }
+
+/* ---------- formulářové buňky ---------- */
+.form-skupina { background: var(--card); border-radius: 10px; overflow: hidden; }
+.sheet .form-skupina { background: var(--sheet-card); }
+.pole { display: flex; align-items: center; min-height: 44px; padding: 0 16px; position: relative; }
+.pole + .pole::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: .5px solid var(--sep); }
+.pole label { width: 118px; flex: none; color: var(--label); }
+.pole input, .pole textarea {
+  flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 17px; padding: 11px 0;
+}
+.pole input::placeholder, .pole textarea::placeholder { color: var(--label3); }
+.pole.svisle { flex-direction: column; align-items: stretch; padding-top: 8px; }
+.pole.svisle label { width: auto; font-size: 13px; color: var(--label2); }
+.pole.svisle textarea { resize: none; padding: 4px 0 10px; min-height: 48px; line-height: 1.35; }
+.pole input[type="date"] { -webkit-appearance: none; appearance: none; text-align: left; min-height: 44px; }
+.pole .jednotka { color: var(--label2); margin-left: 6px; }
+.pole .hodnota { flex: 1; text-align: right; color: var(--label2); font-variant-numeric: tabular-nums; }
+.form-pozn { font-size: 13px; color: var(--label2); padding: 7px 16px 0; }
+
+/* přepínač */
+.prepinac {
+  -webkit-appearance: none; appearance: none; width: 51px; height: 31px; border-radius: 16px;
+  background: var(--switch-off); position: relative; transition: background .2s; flex: none; margin-left: auto; cursor: pointer;
+}
+.prepinac::before {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%;
+  background: #fff; box-shadow: 0 3px 8px rgba(0,0,0,.15), 0 3px 1px rgba(0,0,0,.06); transition: transform .2s;
+}
+.prepinac:checked { background: var(--green); }
+.prepinac:checked::before { transform: translateX(20px); }
+
+.tlacitko-bunka { width: 100%; min-height: 44px; padding: 0 16px; text-align: left; color: var(--blue); display: flex; align-items: center; gap: 8px; }
+.tlacitko-bunka:active { background: var(--fill2); }
+.tlacitko-bunka.cervene { color: var(--red); justify-content: center; }
+.tlacitko-bunka svg { width: 20px; height: 20px; }
+
+/* ---------- sheet (detail) ---------- */
+.sheet {
+  position: fixed; inset: 0; z-index: 40; background: var(--sheet-bg);
+  transform: translateY(100%); transition: transform .32s cubic-bezier(.2, .8, .2, 1);
+  display: flex; flex-direction: column;
+}
+.sheet.otevreno { transform: translateY(0); }
+.sheet-hlavicka {
+  padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+  background: var(--nav);
+  -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: .5px solid var(--sep);
+  flex: none;
+}
+.sheet-hlavicka .nav-titul { opacity: 1; }
+.sheet-hlavicka .ulozit { font-weight: 600; }
+.sheet-obsah {
+  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 0 max(16px, env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+.sheet-obsah > * { max-width: 720px; margin-left: auto; margin-right: auto; }
+
+/* fotky */
+.fotky-mrizka { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px; }
+.fotky-mrizka:empty { display: none; }
+.fotka { aspect-ratio: 1; background: var(--fill); overflow: hidden; border-radius: 6px; }
+.fotka img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fotky-mrizka + .tlacitko-bunka { border-top: .5px solid var(--sep); }
+
+.prepis-text { padding: 11px 16px; font-size: 15px; color: var(--label2); white-space: pre-wrap; }
+audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
+
+/* prohlížeč fotek */
+.prohlizec {
+  position: fixed; inset: 0; z-index: 60; background: #000; display: flex; flex-direction: column;
+}
+.prohlizec .lista {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: calc(env(safe-area-inset-top) + 6px) 16px 6px; color: #fff;
+}
+.prohlizec .lista button { color: #fff; font-size: 17px; padding: 8px 0; }
+.prohlizec .lista .smazat { color: #ff453a; }
+.prohlizec img { flex: 1; min-height: 0; width: 100%; object-fit: contain; }
+
+/* HUD / toast */
+.toast {
+  position: fixed; left: 50%; bottom: calc(30px + env(safe-area-inset-bottom)); z-index: 80;
+  transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
+  background: rgba(30, 30, 32, .92); color: #fff; padding: 11px 18px; border-radius: 14px;
+  font-size: 15px; max-width: calc(100% - 40px); text-align: center; transition: all .25s;
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+}
+.toast.vidim { opacity: 1; transform: translate(-50%, 0); }
+.toast.chybova { background: rgba(200, 40, 30, .95); }
+
+.nacitani { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--label3); border-top-color: var(--label2); border-radius: 50%; animation: toc .8s linear infinite; vertical-align: middle; }
+@keyframes toc { to { transform: rotate(360deg); } }
+.stred { text-align: center; padding: 40px 0; }
+#diag {
+  position: fixed; left: 12px; right: 12px; top: calc(env(safe-area-inset-top) + 12px); z-index: 100;
+  background: #fff1f0; color: #a8071a; border: 1px solid #ffa39e; border-radius: 12px;
+  padding: 12px 14px; font: 13px/1.4 ui-monospace, Menlo, monospace; white-space: pre-wrap; word-break: break-word;
+  max-height: 60vh; overflow: auto; -webkit-user-select: text; user-select: text;
+}
+.verze { text-align: center; color: var(--label3); font-size: 12px; margin-top: 18px; }
+</style>
+</head>
+<body>
+
+<!-- ============ PŘIHLÁŠENÍ ============ -->
+<pre id="diag" class="skryto"></pre>
+<section id="prihlaseni">
+  <img class="logo" src="icon-180.png" alt="">
+  <h1>Servisní záznamy</h1>
+  <p class="pod">Přihlas se svým účtem</p>
+  <form id="form-prihlaseni" autocomplete="on">
+    <div class="form-skupina">
+      <div class="pole"><label for="p-email">E-mail</label><input id="p-email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" required placeholder="jmeno@email.cz"></div>
+      <div class="pole"><label for="p-heslo">Heslo</label><input id="p-heslo" type="password" autocomplete="current-password" required placeholder="Povinné"></div>
+    </div>
+    <button class="velke-tlacitko" id="btn-prihlasit" type="submit">Přihlásit</button>
+    <div class="chyba" id="p-chyba"></div>
+  </form>
+  <div class="verze">verze 2</div>
+</section>
+
+<!-- ============ SEZNAM ============ -->
+<section id="aplikace" class="skryto">
+  <header class="nav" id="nav">
+    <div class="nav-radek">
+      <button class="nav-btn" id="btn-odhlasit">Odhlásit</button>
+      <div class="nav-titul">Záznamy</div>
+      <button class="nav-btn vpravo" id="btn-novy" aria-label="Nový záznam">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="obsah">
+    <h1 class="velky-titul" id="velky-titul">Záznamy</h1>
+
+    <div class="hledani">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 20 20"/></svg>
+      <input id="hledat" type="search" placeholder="Hledat" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
+      <button class="vymazat skryto" id="hledat-x" aria-label="Vymazat">
+        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l6 6M9 3 3 9"/></svg>
+      </button>
+    </div>
+
+    <div class="segment" id="seg-rozsah">
+      <button data-v="vse" class="on">Vše</button>
+      <button data-v="misto">Místo</button>
+      <button data-v="zakaznik">Zákazník</button>
+      <button data-v="zarizeni">Zařízení</button>
+      <button data-v="material">Materiál</button>
+      <button data-v="dily">Díly</button>
+    </div>
+
+    <div class="segment" id="seg-obdobi">
+      <button data-v="vse" class="on">Vše</button>
+      <button data-v="mesic">Tento měsíc</button>
+      <button data-v="minuly">Minulý</button>
+      <button data-v="rok">Tento rok</button>
+    </div>
+
+    <div class="pilulky">
+      <button class="pilulka" id="f-kontrola-pil">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 1 21h22L12 2zm1 15h-2v-2h2v2zm0-4h-2V9h2v4z"/></svg>Ke kontrole
+      </button>
+      <button class="pilulka" id="f-fotky-pil">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>S fotkami
+      </button>
+    </div>
+
+    <div class="souhrn">
+      <div><small>Záznamů</small><b id="s-pocet">0</b></div>
+      <div><small>Práce</small><b id="s-prace">0 h</b></div>
+      <div><small>Cesta</small><b id="s-cesta">0 h</b></div>
+    </div>
+
+    <div id="seznam"><div class="stred"><span class="nacitani"></span></div></div>
+  </main>
+</section>
+
+<!-- ============ DETAIL / ÚPRAVA ============ -->
+<section class="sheet" id="sheet" aria-hidden="true">
+  <div class="sheet-hlavicka">
+    <div class="nav-radek">
+      <button class="nav-btn" id="btn-zrusit">Zrušit</button>
+      <div class="nav-titul" id="sheet-titul">Záznam</div>
+      <button class="nav-btn vpravo ulozit" id="btn-ulozit">Uložit</button>
+    </div>
+  </div>
+  <div class="sheet-obsah" id="sheet-obsah">
+    <div class="sekce-hlavicka">Zásah</div>
+    <div class="form-skupina">
+      <div class="pole"><label for="f-datum">Datum</label><input id="f-datum" type="date"></div>
+      <div class="pole"><label for="f-misto">Místo</label><input id="f-misto" placeholder="Obec, adresa" autocomplete="off"></div>
+      <div class="pole"><label for="f-zakaznik">Zákazník</label><input id="f-zakaznik" placeholder="Jméno nebo firma" autocomplete="off"></div>
+      <div class="pole"><label for="f-zarizeni">Zařízení</label><input id="f-zarizeni" placeholder="Výrobce, typ, s/n" autocomplete="off"></div>
+    </div>
+
+    <div class="sekce-hlavicka">Servis / oprava</div>
+    <div class="form-skupina">
+      <div class="pole svisle"><label for="f-predmet">Předmět servisu / opravy</label><textarea id="f-predmet" rows="2" placeholder="Závada a provedená práce"></textarea></div>
+      <div class="pole svisle"><label for="f-material">Materiál</label><textarea id="f-material" rows="1" placeholder="Chladivo, filtry, izolace…"></textarea></div>
+      <div class="pole svisle"><label for="f-dily">Náhradní díly</label><textarea id="f-dily" rows="1" placeholder="Kondenzátor, deska, ventilátor…"></textarea></div>
+    </div>
+
+    <div class="sekce-hlavicka">Čas</div>
+    <div class="form-skupina">
+      <div class="pole"><label for="f-prace">Práce</label><input id="f-prace" inputmode="decimal" placeholder="0" autocomplete="off"><span class="jednotka">h</span></div>
+      <div class="pole"><label for="f-tam">Cesta tam</label><input id="f-tam" inputmode="decimal" placeholder="0" autocomplete="off"><span class="jednotka">h</span></div>
+      <div class="pole"><label for="f-zpet">Cesta zpět</label><input id="f-zpet" inputmode="decimal" placeholder="0" autocomplete="off"><span class="jednotka">h</span></div>
+      <div class="pole"><label>Celkem</label><span class="hodnota" id="f-celkem">–</span></div>
+    </div>
+    <div class="form-pozn">Hodiny jako 1,5 nebo 1:30.</div>
+
+    <div class="sekce-hlavicka">Fotky</div>
+    <div class="form-skupina">
+      <div class="fotky-mrizka" id="fotky-mrizka"></div>
+      <button class="tlacitko-bunka" id="btn-fotky">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+        <span id="btn-fotky-text">Přidat fotky</span>
+      </button>
+      <input type="file" id="vstup-fotky" accept="image/*" multiple class="skryto">
+    </div>
+
+    <div class="sekce-hlavicka">Stav</div>
+    <div class="form-skupina">
+      <div class="pole"><label for="f-kontrola" style="width:auto">Ke kontrole</label><input type="checkbox" class="prepinac" id="f-kontrola"></div>
+    </div>
+
+    <div id="sekce-prepis" class="skryto">
+      <div class="sekce-hlavicka">Původní diktát</div>
+      <div class="form-skupina">
+        <div class="prepis-text" id="f-prepis"></div>
+        <audio id="f-audio" controls preload="none" class="skryto"></audio>
+      </div>
+    </div>
+
+    <div id="sekce-smazat" style="margin-top:28px">
+      <div class="form-skupina">
+        <button class="tlacitko-bunka cervene" id="btn-smazat">Smazat záznam</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PROHLÍŽEČ FOTEK ============ -->
+<section class="prohlizec skryto" id="prohlizec">
+  <div class="lista">
+    <button class="smazat" id="prohlizec-smazat">Smazat</button>
+    <button id="prohlizec-zavrit"><b>Hotovo</b></button>
+  </div>
+  <img id="prohlizec-img" alt="">
+</section>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// =============================================================
+//  NASTAVENÍ – doplň Publishable key (nebo anon public key)
+//  Supabase → Project Settings → API Keys
+//  NIKDY sem nedávej secret / service_role klíč!
+// =============================================================
+const SUPABASE_URL = "https://pqehuuamgecmdmrdhmza.supabase.co";
+if (typeof supabase === "undefined") {
+  throw new Error("Knihovna Supabase se nenačetla (cdn.jsdelivr.net). Zkontroluj připojení nebo blokování obsahu v Safari.");
+}
+const SUPABASE_KEY = "sb_publishable_6SgwttYu1LHUrAeInwv1Qw_chrfScN7 ";
+// =============================================================
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY.trim());
+console.log("[servis] start, klíč:", SUPABASE_KEY.slice(0, 16) + "…");
+const $ = (s) => document.querySelector(s);
+
+const POLE_TEXT = ["misto", "zakaznik", "zarizeni", "predmet", "material", "nahradni_dily", "prepis"];
+const ROZSAH = {
+  vse: POLE_TEXT,
+  misto: ["misto"],
+  zakaznik: ["zakaznik"],
+  zarizeni: ["zarizeni"],
+  material: ["material"],
+  dily: ["nahradni_dily"],
+};
+const SLOUPCE = "id,datum_zasahu,vytvoreno,misto,zakaznik,zarizeni,predmet,material,nahradni_dily," +
+  "prace_hod,cesta_tam_hod,cesta_zpet_hod,prepis,audio_cesta,fotky,ke_kontrole";
+
+let uzivatel = null;
+let zaznamy = [];
+const stav = { q: "", rozsah: "vse", obdobi: "vse", kontrola: false, fotky: false };
+let aktualni = null;      // otevřený záznam
+let zmeneno = false;      // po zavření detailu znovu načíst seznam
+let prohlizenaFotka = null;
+const urlCache = new Map();
+
+const IKONY = {
+  sipka: '<svg viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 1.5 6.5 6.5 1.5 11.5"/></svg>',
+  prace: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  auto: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M3 16v-4l2-5h14l2 5v4z"/><circle cx="7" cy="16.5" r="1.8"/><circle cx="17" cy="16.5" r="1.8"/></svg>',
+  foto: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+  pozor: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 1 21h22L12 2zm1 15h-2v-2h2v2zm0-4h-2V9h2v4z"/></svg>',
+  prazdno: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>',
+};
+
+// ---------- pomocné ----------
+function log(...a) { console.log("[servis]", ...a); }
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function norm(s) {
+  return String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+function iso(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function dnes() { return iso(new Date()); }
+function fmtCislo(h) {
+  return (Math.round(h * 100) / 100).toLocaleString("cs-CZ", { maximumFractionDigits: 2 });
+}
+function fmtH(h) { return h == null ? "" : fmtCislo(h) + " h"; }
+function fmtDatum(d) {
+  if (!d) return "";
+  const [y, m, den] = d.split("-").map(Number);
+  const r = new Date().getFullYear();
+  return y === r ? `${den}. ${m}.` : `${den}. ${m}. ${y}`;
+}
+function nazevMesice(klic) {
+  const [y, m] = klic.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString("cs-CZ", { month: "long", year: "numeric" });
+}
+// "1,5" / "1.5" / "1:30" / "" → číslo nebo null; jinak výjimka
+function ctiHodiny(v, nazev) {
+  v = (v ?? "").trim();
+  if (!v) return null;
+  let h;
+  const m = v.match(/^(\d+):(\d{1,2})$/);
+  if (m) h = Number(m[1]) + Number(m[2]) / 60;
+  else h = Number(v.replace(",", "."));
+  if (!Number.isFinite(h) || h < 0 || h > 999) throw new Error(`Neplatná hodnota v poli ${nazev}: „${v}“`);
+  return Math.round(h * 100) / 100;
+}
+
+let toastCas;
+function toast(text, chyba = false) {
+  const t = $("#toast");
+  t.textContent = text;
+  t.classList.toggle("chybova", chyba);
+  t.classList.add("vidim");
+  clearTimeout(toastCas);
+  toastCas = setTimeout(() => t.classList.remove("vidim"), chyba ? 5000 : 1800);
+}
+// obalí async akci – chyby vypíše do konzole i na displej
+function akce(fn) {
+  return async (...a) => {
+    try { await fn(...a); }
+    catch (e) {
+      console.error("[servis] chyba", e);
+      toast(e?.message || String(e), true);
+    }
+  };
+}
+window.addEventListener("unhandledrejection", (e) => {
+  console.error("[servis] nezachycená chyba", e.reason);
+  __ukazChybu("Promise: " + (e.reason?.message || e.reason));
+  toast(e.reason?.message || "Neočekávaná chyba", true);
+});
+
+// ---------- přihlášení ----------
+function ukaz(prihlasen) {
+  $("#prihlaseni").classList.toggle("skryto", prihlasen);
+  $("#aplikace").classList.toggle("skryto", !prihlasen);
+}
+
+$("#form-prihlaseni").addEventListener("submit", akce(async (e) => {
+  e.preventDefault();
+  const btn = $("#btn-prihlasit");
+  btn.disabled = true;
+  $("#p-chyba").textContent = "";
+  try {
+    const { error } = await sb.auth.signInWithPassword({
+      email: $("#p-email").value.trim(),
+      password: $("#p-heslo").value,
+    });
+    if (error) {
+      log("přihlášení selhalo", error);
+      $("#p-chyba").textContent = error.message === "Invalid login credentials"
+        ? "Nesprávný e-mail nebo heslo." : error.message;
+    }
+  } finally {
+    btn.disabled = false;
+  }
+}));
+
+$("#btn-odhlasit").addEventListener("click", akce(async () => {
+  if (!confirm("Opravdu se odhlásit?")) return;
+  await sb.auth.signOut();
+}));
+
+sb.auth.onAuthStateChange((udalost, session) => {
+  log("auth", udalost);
+  const novy = session?.user ?? null;
+  const zmena = novy?.id !== uzivatel?.id;
+  uzivatel = novy;
+  ukaz(!!uzivatel);
+  if (uzivatel && zmena) setTimeout(() => nacti().catch(chybaNacteni), 0);
+  if (!uzivatel) { zaznamy = []; urlCache.clear(); }
+});
+
+function chybaNacteni(e) {
+  console.error("[servis] načtení selhalo", e);
+  $("#seznam").innerHTML = `<div class="prazdno"><b>Nepodařilo se načíst záznamy</b>${esc(e?.message || e)}</div>`;
+}
+
+// ---------- načtení a seznam ----------
+async function nacti() {
+  const vse = [];
+  for (let od = 0; ; od += 1000) {
+    const { data, error } = await sb.from("zaznamy").select(SLOUPCE)
+      .order("datum_zasahu", { ascending: false })
+      .order("vytvoreno", { ascending: false })
+      .range(od, od + 999);
+    if (error) throw error;
+    vse.push(...data);
+    if (data.length < 1000) break;
+  }
+  zaznamy = vse.map((z) => {
+    const n = {};
+    for (const p of POLE_TEXT) n[p] = norm(z[p]);
+    return { ...z, fotky: z.fotky || [], _n: n };
+  });
+  log("načteno záznamů:", zaznamy.length);
+  vykresli();
+}
+
+function rozsahObdobi(o) {
+  const t = new Date();
+  if (o === "mesic") return [iso(new Date(t.getFullYear(), t.getMonth(), 1)), iso(new Date(t.getFullYear(), t.getMonth() + 1, 0))];
+  if (o === "minuly") return [iso(new Date(t.getFullYear(), t.getMonth() - 1, 1)), iso(new Date(t.getFullYear(), t.getMonth(), 0))];
+  if (o === "rok") return [`${t.getFullYear()}-01-01`, `${t.getFullYear()}-12-31`];
+  return [null, null];
+}
+
+function filtruj() {
+  const slova = norm(stav.q).split(/\s+/).filter(Boolean);
+  const pole = ROZSAH[stav.rozsah];
+  const [od, doo] = rozsahObdobi(stav.obdobi);
+  return zaznamy.filter((z) => {
+    if (stav.kontrola && !z.ke_kontrole) return false;
+    if (stav.fotky && !z.fotky.length) return false;
+    if (od && (z.datum_zasahu < od || z.datum_zasahu > doo)) return false;
+    if (!slova.length) return true;
+    const text = pole.map((p) => z._n[p]).join(" ");
+    return slova.every((s) => text.includes(s));
+  });
+}
+
+function vykresli() {
+  const vysledek = filtruj();
+
+  let prace = 0, cesta = 0;
+  for (const z of vysledek) {
+    prace += Number(z.prace_hod) || 0;
+    cesta += (Number(z.cesta_tam_hod) || 0) + (Number(z.cesta_zpet_hod) || 0);
+  }
+  $("#s-pocet").textContent = vysledek.length;
+  $("#s-prace").textContent = fmtCislo(prace) + " h";
+  $("#s-cesta").textContent = fmtCislo(cesta) + " h";
+
+  if (!vysledek.length) {
+    const nic = !zaznamy.length;
+    $("#seznam").innerHTML = `<div class="prazdno">${IKONY.prazdno}<b>${nic ? "Zatím žádné záznamy" : "Nic nenalezeno"}</b>${
+      nic ? "Nadiktuj první záznam přes Siri, nebo ho přidej tlačítkem +." : "Zkus upravit hledání nebo filtry."}</div>`;
+    return;
+  }
+
+  const skupiny = new Map();
+  for (const z of vysledek) {
+    const k = (z.datum_zasahu || "").slice(0, 7);
+    if (!skupiny.has(k)) skupiny.set(k, []);
+    skupiny.get(k).push(z);
+  }
+
+  let html = "";
+  for (const [k, polozky] of skupiny) {
+    html += `<div class="sekce-hlavicka">${esc(nazevMesice(k))}</div><div class="skupina">`;
+    for (const z of polozky) {
+      const nazev = [z.zakaznik, z.misto].filter(Boolean).join(" · ") || "Bez zákazníka";
+      const cestaZ = (Number(z.cesta_tam_hod) || 0) + (Number(z.cesta_zpet_hod) || 0);
+      const znacky = [];
+      if (z.ke_kontrole) znacky.push(`<span class="varovani">${IKONY.pozor}Ke kontrole</span>`);
+      if (z.prace_hod != null) znacky.push(`<span>${IKONY.prace}${fmtH(Number(z.prace_hod))}</span>`);
+      if (cestaZ) znacky.push(`<span>${IKONY.auto}${fmtH(cestaZ)}</span>`);
+      if (z.fotky.length) znacky.push(`<span>${IKONY.foto}${z.fotky.length}</span>`);
+      const popis = z.predmet || (!z.zakaznik && !z.misto ? z.prepis : "");
+      html += `<button class="bunka" data-id="${esc(z.id)}">
+        <div class="bunka-telo">
+          <div class="bunka-r1"><span class="bunka-nazev">${esc(nazev)}</span><span class="bunka-datum">${esc(fmtDatum(z.datum_zasahu))}</span></div>
+          ${z.zarizeni ? `<div class="bunka-r2">${esc(z.zarizeni)}</div>` : ""}
+          ${popis ? `<div class="bunka-r3">${esc(popis)}</div>` : ""}
+          ${znacky.length ? `<div class="znacky">${znacky.join("")}</div>` : ""}
+        </div>
+        <span class="sipka">${IKONY.sipka}</span>
+      </button>`;
+    }
+    html += "</div>";
+  }
+  $("#seznam").innerHTML = html;
+}
+
+$("#seznam").addEventListener("click", (e) => {
+  const b = e.target.closest(".bunka");
+  if (b) otevri(zaznamy.find((z) => z.id === b.dataset.id));
+});
+
+// ---------- filtry ----------
+const hledat = $("#hledat");
+hledat.addEventListener("input", () => {
+  stav.q = hledat.value;
+  $("#hledat-x").classList.toggle("skryto", !hledat.value);
+  vykresli();
+});
+hledat.addEventListener("keydown", (e) => { if (e.key === "Enter") hledat.blur(); });
+$("#hledat-x").addEventListener("click", () => {
+  hledat.value = ""; stav.q = "";
+  $("#hledat-x").classList.add("skryto");
+  vykresli();
+});
+
+function segment(id, klic) {
+  $(id).addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    $(id).querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+    stav[klic] = b.dataset.v;
+    vykresli();
+  });
+}
+segment("#seg-rozsah", "rozsah");
+segment("#seg-obdobi", "obdobi");
+
+$("#f-kontrola-pil").addEventListener("click", (e) => {
+  stav.kontrola = !stav.kontrola;
+  e.currentTarget.classList.toggle("on", stav.kontrola);
+  vykresli();
+});
+$("#f-fotky-pil").addEventListener("click", (e) => {
+  stav.fotky = !stav.fotky;
+  e.currentTarget.classList.toggle("on", stav.fotky);
+  vykresli();
+});
+
+// zmenšený titul v liště po odscrollování velkého nadpisu
+new IntersectionObserver(([v]) => $("#nav").classList.toggle("stin", !v.isIntersecting), { rootMargin: "-50px 0px 0px 0px" })
+  .observe($("#velky-titul"));
+
+// obnovit po návratu do aplikace
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && uzivatel && !$("#sheet").classList.contains("otevreno")) {
+    nacti().catch(chybaNacteni);
+  }
+});
+
+// ---------- detail ----------
+const POLE_FORM = {
+  misto: "#f-misto", zakaznik: "#f-zakaznik", zarizeni: "#f-zarizeni",
+  predmet: "#f-predmet", material: "#f-material", nahradni_dily: "#f-dily",
+};
+
+function prizpusobVysku(t) { t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }
+document.querySelectorAll(".sheet textarea").forEach((t) => t.addEventListener("input", () => prizpusobVysku(t)));
+
+function otevri(z) {
+  const novy = !z;
+  aktualni = novy
+    ? { id: crypto.randomUUID(), isNew: true, fotky: [], datum_zasahu: dnes(), ke_kontrole: false }
+    : { ...z, fotky: [...z.fotky] };
+  zmeneno = false;
+
+  $("#sheet-titul").textContent = novy ? "Nový záznam" : "Záznam";
+  $("#f-datum").value = aktualni.datum_zasahu || dnes();
+  for (const [p, sel] of Object.entries(POLE_FORM)) $(sel).value = aktualni[p] ?? "";
+  $("#f-prace").value = aktualni.prace_hod != null ? fmtCislo(Number(aktualni.prace_hod)) : "";
+  $("#f-tam").value = aktualni.cesta_tam_hod != null ? fmtCislo(Number(aktualni.cesta_tam_hod)) : "";
+  $("#f-zpet").value = aktualni.cesta_zpet_hod != null ? fmtCislo(Number(aktualni.cesta_zpet_hod)) : "";
+  $("#f-kontrola").checked = !!aktualni.ke_kontrole;
+  prepoctiCelkem();
+
+  const maPrepis = !!(aktualni.prepis || aktualni.audio_cesta);
+  $("#sekce-prepis").classList.toggle("skryto", !maPrepis);
+  $("#f-prepis").textContent = aktualni.prepis || "(bez přepisu)";
+  const audio = $("#f-audio");
+  audio.classList.add("skryto");
+  audio.removeAttribute("src");
+  if (aktualni.audio_cesta) nactiAudio(aktualni.audio_cesta).catch((e) => log("audio", e));
+
+  $("#sekce-smazat").classList.toggle("skryto", novy);
+  vykresliFotky().catch((e) => log("fotky", e));
+
+  $("#sheet-obsah").scrollTop = 0;
+  $("#sheet").classList.add("otevreno");
+  $("#sheet").setAttribute("aria-hidden", "false");
+  document.body.classList.add("zamceno");
+  requestAnimationFrame(() => document.querySelectorAll(".sheet textarea").forEach(prizpusobVysku));
+}
+
+function zavri() {
+  $("#sheet").classList.remove("otevreno");
+  $("#sheet").setAttribute("aria-hidden", "true");
+  document.body.classList.remove("zamceno");
+  $("#f-audio").pause();
+  if (zmeneno) nacti().catch(chybaNacteni);
+  aktualni = null;
+}
+
+function prepoctiCelkem() {
+  try {
+    const p = ctiHodiny($("#f-prace").value, "Práce") || 0;
+    const t = ctiHodiny($("#f-tam").value, "Cesta tam") || 0;
+    const z = ctiHodiny($("#f-zpet").value, "Cesta zpět") || 0;
+    $("#f-celkem").textContent = p + t + z ? `${fmtCislo(p + t + z)} h` : "–";
+  } catch {
+    $("#f-celkem").textContent = "neplatná hodnota";
+  }
+}
+["#f-prace", "#f-tam", "#f-zpet"].forEach((s) => $(s).addEventListener("input", prepoctiCelkem));
+
+function ctiFormular() {
+  const d = { datum_zasahu: $("#f-datum").value || dnes() };
+  for (const [p, sel] of Object.entries(POLE_FORM)) d[p] = $(sel).value.trim() || null;
+  d.prace_hod = ctiHodiny($("#f-prace").value, "Práce");
+  d.cesta_tam_hod = ctiHodiny($("#f-tam").value, "Cesta tam");
+  d.cesta_zpet_hod = ctiHodiny($("#f-zpet").value, "Cesta zpět");
+  d.ke_kontrole = $("#f-kontrola").checked;
+  return d;
+}
+
+async function ulozit({ zavrit = true } = {}) {
+  const d = ctiFormular();
+  if (aktualni.isNew) {
+    const { error } = await sb.from("zaznamy").insert({ id: aktualni.id, ...d, fotky: aktualni.fotky });
+    if (error) throw error;
+    aktualni.isNew = false;
+    $("#sheet-titul").textContent = "Záznam";
+    $("#sekce-smazat").classList.remove("skryto");
+  } else {
+    const { error } = await sb.from("zaznamy").update(d).eq("id", aktualni.id);
+    if (error) throw error;
+  }
+  Object.assign(aktualni, d);
+  zmeneno = true;
+  log("uloženo", aktualni.id);
+  if (zavrit) { zavri(); toast("Uloženo"); }
+}
+
+$("#btn-novy").addEventListener("click", () => otevri(null));
+$("#btn-zrusit").addEventListener("click", zavri);
+$("#btn-ulozit").addEventListener("click", akce(async () => {
+  const b = $("#btn-ulozit");
+  b.disabled = true;
+  try { await ulozit(); } finally { b.disabled = false; }
+}));
+
+$("#btn-smazat").addEventListener("click", akce(async () => {
+  if (!confirm("Smazat tento záznam včetně fotek a nahrávky?")) return;
+  const z = aktualni;
+  if (z.fotky.length) {
+    const { error } = await sb.storage.from("fotky").remove(z.fotky);
+    if (error) log("mazání fotek", error);
+  }
+  if (z.audio_cesta) {
+    const { error } = await sb.storage.from("nahravky").remove([z.audio_cesta]);
+    if (error) log("mazání nahrávky", error);
+  }
+  const { error } = await sb.from("zaznamy").delete().eq("id", z.id);
+  if (error) throw error;
+  zmeneno = true;
+  zavri();
+  toast("Smazáno");
+}));
+
+async function nactiAudio(cesta) {
+  const { data, error } = await sb.storage.from("nahravky").createSignedUrl(cesta, 3600);
+  if (error) throw error;
+  const a = $("#f-audio");
+  a.src = data.signedUrl;
+  a.classList.remove("skryto");
+}
+
+// ---------- fotky ----------
+async function podepsaneUrl(cesty) {
+  const chybi = cesty.filter((c) => !urlCache.has(c));
+  if (chybi.length) {
+    const { data, error } = await sb.storage.from("fotky").createSignedUrls(chybi, 3600);
+    if (error) throw error;
+    for (const r of data) if (r.signedUrl) urlCache.set(r.path, r.signedUrl);
+  }
+  return cesty.map((c) => urlCache.get(c));
+}
+
+async function vykresliFotky() {
+  const m = $("#fotky-mrizka");
+  const cesty = aktualni.fotky;
+  if (!cesty.length) { m.innerHTML = ""; return; }
+  m.innerHTML = cesty.map(() => `<div class="fotka"></div>`).join("");
+  const urls = await podepsaneUrl(cesty);
+  m.innerHTML = cesty.map((c, i) =>
+    `<button class="fotka" data-cesta="${esc(c)}">${urls[i] ? `<img src="${esc(urls[i])}" loading="lazy" alt="">` : ""}</button>`
+  ).join("");
+}
+
+$("#fotky-mrizka").addEventListener("click", (e) => {
+  const b = e.target.closest(".fotka");
+  if (!b || !b.dataset.cesta) return;
+  prohlizenaFotka = b.dataset.cesta;
+  $("#prohlizec-img").src = urlCache.get(prohlizenaFotka) || "";
+  $("#prohlizec").classList.remove("skryto");
+});
+$("#prohlizec-zavrit").addEventListener("click", () => $("#prohlizec").classList.add("skryto"));
+$("#prohlizec-smazat").addEventListener("click", akce(async () => {
+  if (!confirm("Smazat tuto fotku?")) return;
+  const cesta = prohlizenaFotka;
+  const nove = aktualni.fotky.filter((c) => c !== cesta);
+  if (!aktualni.isNew) {
+    const { error } = await sb.from("zaznamy").update({ fotky: nove }).eq("id", aktualni.id);
+    if (error) throw error;
+  }
+  const { error } = await sb.storage.from("fotky").remove([cesta]);
+  if (error) log("mazání fotky ze storage", error);
+  aktualni.fotky = nove;
+  urlCache.delete(cesta);
+  zmeneno = true;
+  $("#prohlizec").classList.add("skryto");
+  await vykresliFotky();
+}));
+
+$("#btn-fotky").addEventListener("click", () => $("#vstup-fotky").click());
+
+// zmenší fotku na max 1600 px a uloží jako JPEG
+async function zmensi(soubor, max = 1600, kvalita = 0.82) {
+  const url = URL.createObjectURL(soubor);
+  try {
+    const img = await new Promise((ok, chyba) => {
+      const i = new Image();
+      i.onload = () => ok(i);
+      i.onerror = () => chyba(new Error(`Fotku ${soubor.name} nelze načíst`));
+      i.src = url;
+    });
+    const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement("canvas");
+    c.width = Math.round(img.naturalWidth * k);
+    c.height = Math.round(img.naturalHeight * k);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    return await new Promise((ok, chyba) =>
+      c.toBlob((b) => (b ? ok(b) : chyba(new Error("Komprese fotky selhala"))), "image/jpeg", kvalita));
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+$("#vstup-fotky").addEventListener("change", akce(async (e) => {
+  const soubory = [...e.target.files];
+  e.target.value = "";
+  if (!soubory.length) return;
+  const text = $("#btn-fotky-text");
+  const btn = $("#btn-fotky");
+  btn.disabled = true;
+  try {
+    // nový záznam nejdřív uložit, ať fotky mají k čemu patřit
+    if (aktualni.isNew) await ulozit({ zavrit: false });
+    const nahrane = [];
+    for (let i = 0; i < soubory.length; i++) {
+      text.textContent = `Nahrávám ${i + 1} / ${soubory.length}…`;
+      const blob = await zmensi(soubory[i]);
+      const cesta = `${uzivatel.id}/${aktualni.id}/${crypto.randomUUID()}.jpg`;
+      const { error } = await sb.storage.from("fotky").upload(cesta, blob, { contentType: "image/jpeg" });
+      if (error) throw error;
+      log("fotka nahrána", cesta, Math.round(blob.size / 1024) + " kB");
+      nahrane.push(cesta);
+    }
+    const nove = [...aktualni.fotky, ...nahrane];
+    const { error } = await sb.from("zaznamy").update({ fotky: nove }).eq("id", aktualni.id);
+    if (error) throw error;
+    aktualni.fotky = nove;
+    zmeneno = true;
+    await vykresliFotky();
+    toast(nahrane.length === 1 ? "Fotka přidána" : `Přidáno fotek: ${nahrane.length}`);
+  } finally {
+    text.textContent = "Přidat fotky";
+    btn.disabled = false;
+  }
+}));
+
+// ---------- start ----------
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch((e) => log("service worker", e));
+}
+if (SUPABASE_KEY.startsWith("SEM_")) {
+  ukaz(false);
+  $("#p-chyba").textContent = "V index.html chybí SUPABASE_KEY.";
+} else {
+  sb.auth.getSession()
+    .then(({ data, error }) => {
+      if (error) __ukazChybu("getSession: " + error.message);
+      if (!data?.session) ukaz(false);
+    })
+    .catch((e) => { __ukazChybu("getSession: " + (e?.message || e)); ukaz(false); });
+}
+</script>
+</body>
+</html>
