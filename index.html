@@ -241,6 +241,7 @@ input, textarea { font: inherit; color: inherit; }
   background: #fff; box-shadow: 0 3px 8px rgba(0,0,0,.15), 0 3px 1px rgba(0,0,0,.06); transition: transform .2s;
 }
 .prepinac:checked { background: var(--green); }
+.pole .prepinac { flex: none; width: 51px; height: 31px; padding: 0; margin-left: auto; }
 .prepinac:checked::before { transform: translateX(20px); }
 
 .tlacitko-bunka { width: 100%; min-height: 44px; padding: 0 16px; text-align: left; color: var(--blue); display: flex; align-items: center; gap: 8px; }
@@ -322,6 +323,30 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
 }
 .souhrn div { padding: 10px 10px; }
 .souhrn b { font-size: 18px; }
+.sheet.vice .jen-jeden, .sheet:not(.vice) .jen-vice { display: none !important; }
+.sheet.vice.montaz #h-cas, .sheet.vice.montaz #skupina-cas, .sheet.vice.montaz #skupina-cas + .form-pozn { display: none; }
+.den-radek { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; position: relative; }
+.den-radek + .den-radek::before, .den-celkem::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: .5px solid var(--sep); }
+.den-radek .den-nazev { flex: 1; min-width: 0; white-space: nowrap; }
+.den-radek .den-nazev small { color: var(--label2); font-size: 15px; margin-left: 4px; }
+.den-radek input {
+  width: 58px; border: 0; outline: 0; background: var(--fill); border-radius: 8px; text-align: right;
+  font-size: 17px; padding: 6px 8px; font-variant-numeric: tabular-nums;
+}
+.den-radek input.km { width: 70px; }
+.den-radek .jednotka { color: var(--label2); width: 22px; }
+.navrhy { border-top: .5px solid var(--sep); border-bottom: .5px solid var(--sep); margin: 0 0 0 16px; background: var(--fill); border-radius: 0; }
+.navrhy + .pole::before { display: none; }
+.navrhy button {
+  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 10px 16px 10px 0;
+  color: var(--label); font-size: 16px;
+}
+.navrhy button + button { border-top: .5px solid var(--sep); }
+.navrhy button:active { background: var(--fill2); }
+.navrhy svg { width: 15px; height: 15px; color: var(--label3); flex: none; }
+.navrhy span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.navrhy mark { background: none; color: var(--blue); font-weight: 600; }
+.navrhy small { color: var(--label2); font-size: 13px; flex: none; }
 .verze { text-align: center; color: var(--label3); font-size: 12px; margin-top: 18px; }
 </style>
 </head>
@@ -341,7 +366,7 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
     <button class="velke-tlacitko" id="btn-prihlasit" type="submit">Přihlásit</button>
     <div class="chyba" id="p-chyba"></div>
   </form>
-  <div class="verze">verze 3 · montáže</div>
+  <div class="verze">verze 4 · rozsah dní, návrhy</div>
 </section>
 
 <!-- ============ SEZNAM ============ -->
@@ -428,7 +453,9 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
     <div class="sekce-hlavicka" id="h-zasah">Zásah</div>
     <div class="form-skupina">
       <div class="pole jen-montaz"><label for="f-akce">Akce</label><input id="f-akce" placeholder="Název akce / zakázky" autocomplete="off"></div>
-      <div class="pole"><label for="f-datum">Datum</label><input id="f-datum" type="date"></div>
+      <div class="pole"><label for="f-datum" id="l-datum">Datum</label><input id="f-datum" type="date"></div>
+      <div class="pole"><label for="f-vicedni" style="width:auto">Více dní</label><input type="checkbox" class="prepinac" id="f-vicedni"></div>
+      <div class="pole jen-vice"><label for="f-datum-do">Do</label><input id="f-datum-do" type="date"></div>
       <div class="pole"><label for="f-misto">Místo</label><input id="f-misto" placeholder="Obec, adresa" autocomplete="off"></div>
       <div class="pole"><label for="f-zakaznik">Zákazník</label><input id="f-zakaznik" placeholder="Jméno nebo firma" autocomplete="off"></div>
       <div class="pole"><label for="f-zarizeni">Zařízení</label><input id="f-zarizeni" placeholder="Výrobce, typ, s/n" autocomplete="off"></div>
@@ -441,13 +468,22 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
       <div class="pole svisle"><label for="f-dily">Náhradní díly</label><textarea id="f-dily" rows="1" placeholder="Kondenzátor, deska, ventilátor…"></textarea></div>
     </div>
 
-    <div class="sekce-hlavicka">Čas</div>
-    <div class="form-skupina">
-      <div class="pole"><label for="f-prace">Práce</label><input id="f-prace" inputmode="decimal" placeholder="0" autocomplete="off"><span class="jednotka">h</span></div>
+    <div class="jen-vice">
+      <div class="sekce-hlavicka">Dny</div>
+      <div class="form-skupina">
+        <div id="f-dny"></div>
+        <div class="pole den-celkem"><label>Celkem</label><span class="hodnota" id="f-dny-celkem">–</span></div>
+      </div>
+      <div class="form-pozn">Hodiny a km pro každý den zvlášť. Km z prvního dne se předvyplní do dalších.</div>
+    </div>
+
+    <div class="sekce-hlavicka" id="h-cas">Čas</div>
+    <div class="form-skupina" id="skupina-cas">
+      <div class="pole jen-jeden"><label for="f-prace">Práce</label><input id="f-prace" inputmode="decimal" placeholder="0" autocomplete="off"><span class="jednotka">h</span></div>
       <div class="pole jen-servis"><label for="f-tam">Cesta tam</label><input id="f-tam" inputmode="decimal" placeholder="0" autocomplete="off"><span class="jednotka">h</span></div>
       <div class="pole jen-servis"><label for="f-zpet">Cesta zpět</label><input id="f-zpet" inputmode="decimal" placeholder="0" autocomplete="off"><span class="jednotka">h</span></div>
-      <div class="pole jen-servis"><label>Celkem</label><span class="hodnota" id="f-celkem">–</span></div>
-      <div class="pole"><label for="f-km">Cesta</label><input id="f-km" inputmode="decimal" placeholder="0" autocomplete="off"><span class="jednotka">km</span></div>
+      <div class="pole jen-servis jen-jeden"><label>Celkem</label><span class="hodnota" id="f-celkem">–</span></div>
+      <div class="pole jen-jeden"><label for="f-km">Cesta</label><input id="f-km" inputmode="decimal" placeholder="0" autocomplete="off"><span class="jednotka">km</span></div>
     </div>
     <div class="form-pozn">Hodiny jako 1,5 nebo 1:30. Kilometry celkem tam i zpět.</div>
 
@@ -521,7 +557,7 @@ const ROZSAH = {
   material: ["material"],
   dily: ["nahradni_dily"],
 };
-const SLOUPCE = "id,typ,akce,datum_zasahu,vytvoreno,misto,zakaznik,zarizeni,predmet,material,nahradni_dily," +
+const SLOUPCE = "id,skupina,typ,akce,datum_zasahu,vytvoreno,misto,zakaznik,zarizeni,predmet,material,nahradni_dily," +
   "prace_hod,cesta_tam_hod,cesta_zpet_hod,cesta_km,prepis,audio_cesta,fotky,ke_kontrole";
 
 let uzivatel = null;
@@ -538,6 +574,8 @@ const IKONY = {
   auto: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M3 16v-4l2-5h14l2 5v4z"/><circle cx="7" cy="16.5" r="1.8"/><circle cx="17" cy="16.5" r="1.8"/></svg>',
   foto: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
   pozor: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 1 21h22L12 2zm1 15h-2v-2h2v2zm0-4h-2V9h2v4z"/></svg>',
+  hodiny: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  kalendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
   prazdno: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>',
 };
 
@@ -674,6 +712,7 @@ async function nacti() {
     for (const p of POLE_TEXT) n[p] = norm(z[p]);
     return { ...z, fotky: z.fotky || [], _n: n };
   });
+  postavIndexNavrhu();
   log("načteno záznamů:", zaznamy.length);
   vykresli();
 }
@@ -722,6 +761,16 @@ function vykresli() {
     return;
   }
 
+  // pořadí dne ve vícedenní skupině ("den 2/3")
+  const poradi = new Map();
+  const vSkupine = new Map();
+  for (const z of zaznamy) if (z.skupina) (vSkupine.get(z.skupina) || vSkupine.set(z.skupina, []).get(z.skupina)).push(z);
+  for (const dny of vSkupine.values()) {
+    if (dny.length < 2) continue;
+    dny.sort((a, b) => a.datum_zasahu.localeCompare(b.datum_zasahu));
+    dny.forEach((d, i) => poradi.set(d.id, `${i + 1}/${dny.length}`));
+  }
+
   const skupiny = new Map();
   for (const z of vysledek) {
     const k = (z.datum_zasahu || "").slice(0, 7);
@@ -741,6 +790,7 @@ function vykresli() {
       const cestaZ = (Number(z.cesta_tam_hod) || 0) + (Number(z.cesta_zpet_hod) || 0);
       const znacky = [];
       if (z.ke_kontrole) znacky.push(`<span class="varovani">${IKONY.pozor}Ke kontrole</span>`);
+      if (z.skupina && poradi.has(z.id)) znacky.push(`<span>${IKONY.kalendar}den ${poradi.get(z.id)}</span>`);
       if (z.prace_hod != null) znacky.push(`<span>${IKONY.prace}${fmtH(Number(z.prace_hod))}</span>`);
       if (cestaZ) znacky.push(`<span>${IKONY.auto}${fmtH(cestaZ)}</span>`);
       if (z.cesta_km != null) znacky.push(`<span>${montaz || !cestaZ ? IKONY.auto : ""}${fmtCislo(Number(z.cesta_km))} km</span>`);
@@ -848,24 +898,158 @@ function ctiKm(v) {
   return Math.round(km * 10) / 10;
 }
 
+// ---------- vícedenní zadání ----------
+const DNY_TYDNE = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
+let hodnotyDnu = new Map();   // datum → { prace: "8", km: "96" } (texty z polí)
+
+function pridejDen(iso, n) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return iso_(new Date(y, m - 1, d + n));
+}
+function iso_(d) { return iso(d); }
+function datumyRozsah(od, doo) {
+  const out = [];
+  if (!od) return out;
+  if (!doo || doo < od) doo = od;
+  for (let d = od; d <= doo && out.length < 31; d = pridejDen(d, 1)) out.push(d);
+  return out;
+}
+function nazevDne(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return `${DNY_TYDNE[new Date(y, m - 1, d).getDay()]} <small>${d}. ${m}.</small>`;
+}
+function jeVicedni() { return $("#f-vicedni").checked; }
+
+function vykresliDny() {
+  const datumy = datumyRozsah($("#f-datum").value, $("#f-datum-do").value);
+  $("#f-dny").innerHTML = datumy.map((d) => {
+    const h = hodnotyDnu.get(d) || {};
+    return `<div class="den-radek" data-datum="${d}">
+      <span class="den-nazev">${nazevDne(d)}</span>
+      <input class="hod" inputmode="decimal" placeholder="0" value="${esc(h.prace ?? "")}" aria-label="Hodiny"><span class="jednotka">h</span>
+      <input class="km" inputmode="decimal" placeholder="0" value="${esc(h.km ?? "")}" aria-label="Kilometry"><span class="jednotka">km</span>
+    </div>`;
+  }).join("");
+  if (datumy.length >= 31) toast("Rozsah je omezený na 31 dní", true);
+  prepoctiDny();
+}
+
+function prepoctiDny() {
+  let h = 0, km = 0, chyba = false;
+  for (const r of document.querySelectorAll("#f-dny .den-radek")) {
+    try {
+      h += ctiHodiny(r.querySelector(".hod").value, "Hodiny") || 0;
+      km += ctiKm(r.querySelector(".km").value) || 0;
+    } catch { chyba = true; }
+  }
+  const pocet = document.querySelectorAll("#f-dny .den-radek").length;
+  $("#f-dny-celkem").textContent = chyba ? "neplatná hodnota"
+    : `${pocet} ${pocet >= 2 && pocet <= 4 ? "dny" : "dní"} · ${fmtCislo(h)} h · ${fmtCislo(km)} km`;
+}
+
+$("#f-dny").addEventListener("input", (e) => {
+  const r = e.target.closest(".den-radek");
+  if (!r) return;
+  const d = r.dataset.datum;
+  const zaznam = hodnotyDnu.get(d) || {};
+  if (e.target.classList.contains("hod")) zaznam.prace = e.target.value;
+  if (e.target.classList.contains("km")) {
+    // km z prvního dne se kopírují do dalších dnů, které jsou prázdné nebo měly stejnou hodnotu
+    const radky = [...document.querySelectorAll("#f-dny .den-radek")];
+    if (radky[0] === r) {
+      const stara = zaznam.km ?? "";
+      for (const o of radky.slice(1)) {
+        const inp = o.querySelector(".km");
+        if (inp.value === "" || inp.value === stara) {
+          inp.value = e.target.value;
+          const oh = hodnotyDnu.get(o.dataset.datum) || {};
+          oh.km = e.target.value;
+          hodnotyDnu.set(o.dataset.datum, oh);
+        }
+      }
+    }
+    zaznam.km = e.target.value;
+  }
+  hodnotyDnu.set(d, zaznam);
+  prepoctiDny();
+});
+
+function nastavVicedni(zapnout) {
+  $("#f-vicedni").checked = zapnout;
+  $("#sheet").classList.toggle("vice", zapnout);
+  $("#l-datum").textContent = zapnout ? "Od" : "Datum";
+  if (zapnout) {
+    const od = $("#f-datum").value || dnes();
+    if (!$("#f-datum-do").value || $("#f-datum-do").value <= od) $("#f-datum-do").value = pridejDen(od, 1);
+    // hodnoty z jednodenního formuláře převzít do prvního dne
+    if (!hodnotyDnu.has(od) && ($("#f-prace").value || $("#f-km").value)) {
+      hodnotyDnu.set(od, { prace: $("#f-prace").value, km: $("#f-km").value });
+    }
+    vykresliDny();
+  } else {
+    const od = $("#f-datum").value;
+    const h = hodnotyDnu.get(od);
+    if (h) { $("#f-prace").value = h.prace ?? ""; $("#f-km").value = h.km ?? ""; prepoctiCelkem(); }
+  }
+}
+$("#f-vicedni").addEventListener("change", (e) => nastavVicedni(e.target.checked));
+["#f-datum", "#f-datum-do"].forEach((s) => $(s).addEventListener("change", () => {
+  if (jeVicedni()) {
+    if ($("#f-datum-do").value && $("#f-datum-do").value < $("#f-datum").value) $("#f-datum-do").value = $("#f-datum").value;
+    vykresliDny();
+  }
+}));
+
+// ostatní dny stejné skupiny (vícedenní zadání)
+function sourozenci(z) {
+  if (!z?.skupina) return [];
+  return zaznamy.filter((s) => s.skupina === z.skupina)
+    .sort((a, b) => a.datum_zasahu.localeCompare(b.datum_zasahu));
+}
+
 function otevri(z) {
   const novy = !z;
+  const skupina = novy ? [] : sourozenci(z);
+  const zaklad = skupina.length > 1 ? skupina[0] : z;   // první den nese fotky a materiál
   aktualni = novy
     ? { id: noveId(), isNew: true, fotky: [], datum_zasahu: dnes(), ke_kontrole: false,
-        typ: stav.typ === "montaz" ? "montaz" : "servis" }
-    : { ...z, fotky: [...z.fotky], typ: z.typ || "servis" };
+        typ: stav.typ === "montaz" ? "montaz" : "servis", skupinaIds: [] }
+    : { ...zaklad, fotky: [...zaklad.fotky], typ: zaklad.typ || "servis",
+        skupinaIds: skupina.length > 1 ? skupina.map((s) => s.id) : [zaklad.id] };
   zmeneno = false;
+  hodnotyDnu = new Map();
 
   nastavTyp(aktualni.typ);
   $("#f-km").value = aktualni.cesta_km != null ? fmtCislo(Number(aktualni.cesta_km)) : "";
-  $("#sheet-titul").textContent = novy ? (aktualni.typ === "montaz" ? "Nová montáž" : "Nový záznam") : "Záznam";
+  $("#sheet-titul").textContent = novy ? (aktualni.typ === "montaz" ? "Nová montáž" : "Nový záznam")
+    : skupina.length > 1 ? `${skupina.length} ${skupina.length <= 4 ? "dny" : "dní"}` : "Záznam";
   $("#f-datum").value = aktualni.datum_zasahu || dnes();
   for (const [p, sel] of Object.entries(POLE_FORM)) $(sel).value = aktualni[p] ?? "";
+  if (skupina.length > 1) {
+    // materiál a díly ze všech dnů (ukládají se k prvnímu dni)
+    const spoj = (p) => [...new Set(skupina.map((s) => s[p]).filter(Boolean))].join("; ");
+    $("#f-material").value = spoj("material");
+    $("#f-dily").value = spoj("nahradni_dily");
+  }
   $("#f-prace").value = aktualni.prace_hod != null ? fmtCislo(Number(aktualni.prace_hod)) : "";
   $("#f-tam").value = aktualni.cesta_tam_hod != null ? fmtCislo(Number(aktualni.cesta_tam_hod)) : "";
   $("#f-zpet").value = aktualni.cesta_zpet_hod != null ? fmtCislo(Number(aktualni.cesta_zpet_hod)) : "";
-  $("#f-kontrola").checked = !!aktualni.ke_kontrole;
+  $("#f-kontrola").checked = skupina.length > 1 ? skupina.some((s) => s.ke_kontrole) : !!aktualni.ke_kontrole;
   prepoctiCelkem();
+
+  if (skupina.length > 1) {
+    for (const s of skupina) {
+      hodnotyDnu.set(s.datum_zasahu, {
+        prace: s.prace_hod != null ? fmtCislo(Number(s.prace_hod)) : "",
+        km: s.cesta_km != null ? fmtCislo(Number(s.cesta_km)) : "",
+      });
+    }
+    $("#f-datum-do").value = skupina[skupina.length - 1].datum_zasahu;
+    nastavVicedni(true);
+  } else {
+    $("#f-datum-do").value = "";
+    nastavVicedni(false);
+  }
 
   const maPrepis = !!(aktualni.prepis || aktualni.audio_cesta);
   $("#sekce-prepis").classList.toggle("skryto", !maPrepis);
@@ -876,6 +1060,7 @@ function otevri(z) {
   if (aktualni.audio_cesta) nactiAudio(aktualni.audio_cesta).catch((e) => log("audio", e));
 
   $("#sekce-smazat").classList.toggle("skryto", novy);
+  $("#btn-smazat").textContent = skupina.length > 1 ? `Smazat všech ${skupina.length} dní` : "Smazat záznam";
   vykresliFotky().catch((e) => log("fotky", e));
 
   $("#sheet-obsah").scrollTop = 0;
@@ -886,6 +1071,7 @@ function otevri(z) {
 }
 
 function zavri() {
+  skryjNavrhy();
   $("#sheet").classList.remove("otevreno");
   $("#sheet").setAttribute("aria-hidden", "true");
   document.body.classList.remove("zamceno");
@@ -906,34 +1092,91 @@ function prepoctiCelkem() {
 }
 ["#f-prace", "#f-tam", "#f-zpet"].forEach((s) => $(s).addEventListener("input", prepoctiCelkem));
 
+// společné údaje (platí pro všechny dny)
 function ctiFormular() {
-  const d = { datum_zasahu: $("#f-datum").value || dnes(), typ: aktualni.typ || "servis" };
+  const d = { typ: aktualni.typ || "servis" };
   for (const [p, sel] of Object.entries(POLE_FORM)) d[p] = $(sel).value.trim() || null;
-  d.prace_hod = ctiHodiny($("#f-prace").value, "Práce");
   d.cesta_tam_hod = ctiHodiny($("#f-tam").value, "Cesta tam");
   d.cesta_zpet_hod = ctiHodiny($("#f-zpet").value, "Cesta zpět");
-  d.cesta_km = ctiKm($("#f-km").value);
   if (d.typ !== "montaz") d.akce = null;
   d.ke_kontrole = $("#f-kontrola").checked;
   return d;
 }
 
+// údaje jednotlivých dnů
+function ctiDny() {
+  if (!jeVicedni()) {
+    return [{
+      datum: $("#f-datum").value || dnes(),
+      prace_hod: ctiHodiny($("#f-prace").value, "Práce"),
+      cesta_km: ctiKm($("#f-km").value),
+    }];
+  }
+  const radky = [...document.querySelectorAll("#f-dny .den-radek")];
+  if (radky.length < 2) throw new Error("Pro více dní nastav datum Do později než Od.");
+  return radky.map((r) => ({
+    datum: r.dataset.datum,
+    prace_hod: ctiHodiny(r.querySelector(".hod").value, `Hodiny (${r.dataset.datum})`),
+    cesta_km: ctiKm(r.querySelector(".km").value),
+  }));
+}
+
 async function ulozit({ zavrit = true } = {}) {
-  const d = ctiFormular();
-  if (aktualni.isNew) {
-    const { error } = await sb.from("zaznamy").insert({ id: aktualni.id, ...d, fotky: aktualni.fotky });
-    if (error) throw error;
-    aktualni.isNew = false;
-    $("#sheet-titul").textContent = "Záznam";
-    $("#sekce-smazat").classList.remove("skryto");
-  } else {
-    const { error } = await sb.from("zaznamy").update(d).eq("id", aktualni.id);
+  const spolecne = ctiFormular();
+  const dny = ctiDny();
+  const vice = dny.length > 1;
+  const skupina = vice ? (aktualni.skupina || noveId()) : null;
+
+  // existující záznamy znovu použít (první = ten s fotkami), chybějící vložit, přebývající smazat
+  const pool = aktualni.isNew ? [] : [...aktualni.skupinaIds];
+  const smazat = pool.slice(dny.length);
+  if (smazat.length && !confirm(`Rozsah se zkrátil – smazat ${smazat.length} ${smazat.length === 1 ? "den" : "dny"} navíc?`)) return;
+
+  const vlozit = [];
+  const upravy = [];
+  dny.forEach((den, i) => {
+    const radek = {
+      ...spolecne,
+      skupina,
+      datum_zasahu: den.datum,
+      prace_hod: den.prace_hod,
+      cesta_km: den.cesta_km,
+      // cesta v hodinách, materiál a díly jen u prvního dne – v přehledech se nesčítají vícekrát
+      cesta_tam_hod: i === 0 ? spolecne.cesta_tam_hod : null,
+      cesta_zpet_hod: i === 0 ? spolecne.cesta_zpet_hod : null,
+      material: i === 0 ? spolecne.material : null,
+      nahradni_dily: i === 0 ? spolecne.nahradni_dily : null,
+    };
+    if (i === 0 && aktualni.isNew) vlozit.push({ id: aktualni.id, ...radek, fotky: aktualni.fotky });
+    else if (i < pool.length) upravy.push({ id: pool[i], ...radek });
+    else vlozit.push({ id: noveId(), ...radek, fotky: [] });
+  });
+
+  for (const u of upravy) {
+    const { id, ...data } = u;
+    const { error } = await sb.from("zaznamy").update(data).eq("id", id);
     if (error) throw error;
   }
-  Object.assign(aktualni, d);
+  if (vlozit.length) {
+    const { error } = await sb.from("zaznamy").insert(vlozit);
+    if (error) throw error;
+  }
+  if (smazat.length) {
+    const { error } = await sb.from("zaznamy").delete().in("id", smazat);
+    if (error) throw error;
+  }
+  log("uloženo", { upraveno: upravy.length, vlozeno: vlozit.length, smazano: smazat.length });
+
+  aktualni.isNew = false;
+  aktualni.skupina = skupina;
+  aktualni.skupinaIds = [...upravy.map((u) => u.id), ...vlozit.map((v) => v.id)];
+  aktualni.id = aktualni.skupinaIds[0];
+  Object.assign(aktualni, { ...spolecne, datum_zasahu: dny[0].datum });
+  $("#sheet-titul").textContent = vice ? `${dny.length} ${dny.length <= 4 ? "dny" : "dní"}` : "Záznam";
+  $("#sekce-smazat").classList.remove("skryto");
+  $("#btn-smazat").textContent = vice ? `Smazat všech ${dny.length} dní` : "Smazat záznam";
   zmeneno = true;
-  log("uloženo", aktualni.id);
-  if (zavrit) { zavri(); toast("Uloženo"); }
+  if (zavrit) { zavri(); toast(vice ? `Uloženo: ${dny.length} ${dny.length <= 4 ? "dny" : "dní"}` : "Uloženo"); }
 }
 
 $("#btn-novy").addEventListener("click", () => otevri(null));
@@ -945,22 +1188,124 @@ $("#btn-ulozit").addEventListener("click", akce(async () => {
 }));
 
 $("#btn-smazat").addEventListener("click", akce(async () => {
-  if (!confirm("Smazat tento záznam včetně fotek a nahrávky?")) return;
-  const z = aktualni;
-  if (z.fotky.length) {
-    const { error } = await sb.storage.from("fotky").remove(z.fotky);
+  const ids = aktualni.skupinaIds?.length ? aktualni.skupinaIds : [aktualni.id];
+  const zazn = zaznamy.filter((z) => ids.includes(z.id));
+  if (!confirm(ids.length > 1 ? `Smazat všech ${ids.length} dní včetně fotek a nahrávky?`
+    : "Smazat tento záznam včetně fotek a nahrávky?")) return;
+  const fotky = [...new Set([...aktualni.fotky, ...zazn.flatMap((z) => z.fotky || [])])];
+  if (fotky.length) {
+    const { error } = await sb.storage.from("fotky").remove(fotky);
     if (error) log("mazání fotek", error);
   }
-  if (z.audio_cesta) {
-    const { error } = await sb.storage.from("nahravky").remove([z.audio_cesta]);
+  const audia = [...new Set(zazn.map((z) => z.audio_cesta).filter(Boolean))];
+  if (audia.length) {
+    const { error } = await sb.storage.from("nahravky").remove(audia);
     if (error) log("mazání nahrávky", error);
   }
-  const { error } = await sb.from("zaznamy").delete().eq("id", z.id);
+  const { error } = await sb.from("zaznamy").delete().in("id", ids);
   if (error) throw error;
   zmeneno = true;
   zavri();
   toast("Smazáno");
 }));
+
+// ---------- návrhy hodnot (našeptávač) ----------
+const POLE_NAVRHY = {
+  akce: "#f-akce", misto: "#f-misto", zakaznik: "#f-zakaznik", zarizeni: "#f-zarizeni",
+  material: "#f-material", nahradni_dily: "#f-dily",
+};
+let indexNavrhu = {};   // pole → [{ hodnota, n, posledni, norm }]
+
+function postavIndexNavrhu() {
+  indexNavrhu = {};
+  for (const pole of Object.keys(POLE_NAVRHY)) {
+    const m = new Map();
+    for (const z of zaznamy) {
+      const v = (z[pole] || "").trim();
+      if (!v) continue;
+      const k = norm(v);
+      const e = m.get(k) || { hodnota: v, n: 0, posledni: "" };
+      e.n++;
+      if ((z.datum_zasahu || "") > e.posledni) { e.posledni = z.datum_zasahu || ""; e.hodnota = v; }
+      m.set(k, e);
+    }
+    indexNavrhu[pole] = [...m.entries()].map(([k, e]) => ({ ...e, norm: k }));
+  }
+}
+
+function najdiNavrhy(pole, q) {
+  const nq = norm(q).trim();
+  const slova = nq.split(/\s+/).filter(Boolean);
+  return (indexNavrhu[pole] || [])
+    .filter((e) => e.norm !== nq && slova.every((s) => e.norm.includes(s)))
+    .map((e) => ({ ...e, skore: (slova.length && e.norm.startsWith(slova[0]) ? 1000 : 0) + e.n * 10 + (e.posledni > pridejDen(dnes(), -60) ? 50 : 0) }))
+    .sort((a, b) => b.skore - a.skore || b.posledni.localeCompare(a.posledni))
+    .slice(0, 5);
+}
+
+function zvyrazni(text, q) {
+  const slova = norm(q).split(/\s+/).filter(Boolean);
+  if (!slova.length) return esc(text);
+  // zvýraznit první shodu (bez ohledu na diakritiku – normalizace zachovává délku)
+  const n = norm(text);
+  const i = n.indexOf(slova[0]);
+  if (i < 0) return esc(text);
+  const j = i + slova[0].length;
+  return esc(text.slice(0, i)) + "<mark>" + esc(text.slice(i, j)) + "</mark>" + esc(text.slice(j));
+}
+
+let navrhyPole = null;
+function skryjNavrhy() {
+  document.querySelectorAll(".navrhy").forEach((n) => n.remove());
+  navrhyPole = null;
+}
+function ukazNavrhy(pole) {
+  const vstup = $(POLE_NAVRHY[pole]);
+  const seznam = najdiNavrhy(pole, vstup.value);
+  document.querySelectorAll(".navrhy").forEach((n) => n.remove());
+  navrhyPole = pole;
+  if (!seznam.length) return;
+  const box = document.createElement("div");
+  box.className = "navrhy";
+  box.innerHTML = seznam.map((e) =>
+    `<button type="button" data-hodnota="${esc(e.hodnota)}">${IKONY.hodiny}<span>${zvyrazni(e.hodnota, vstup.value)}</span>${e.n > 1 ? `<small>${e.n}×</small>` : ""}</button>`
+  ).join("");
+  box.addEventListener("pointerdown", (ev) => ev.preventDefault());   // nezavírat klávesnici
+  box.addEventListener("click", (ev) => {
+    const b = ev.target.closest("button");
+    if (!b) return;
+    vstup.value = b.dataset.hodnota;
+    if (vstup.tagName === "TEXTAREA") prizpusobVysku(vstup);
+    skryjNavrhy();
+    predvypln(pole, b.dataset.hodnota);
+  });
+  vstup.closest(".pole").after(box);
+}
+
+// po výběru akce / zákazníka doplnit prázdná související pole z posledního záznamu
+function predvypln(pole, hodnota) {
+  const souvisejici = { akce: ["misto", "zakaznik", "zarizeni"], zakaznik: ["misto", "zarizeni"] }[pole];
+  if (!souvisejici) return;
+  const nh = norm(hodnota);
+  const posledni = zaznamy
+    .filter((z) => norm(z[pole]) === nh)
+    .sort((a, b) => (b.datum_zasahu || "").localeCompare(a.datum_zasahu || ""))[0];
+  if (!posledni) return;
+  const doplneno = [];
+  for (const p of souvisejici) {
+    const el = $(POLE_FORM[p]);
+    if (!el.value.trim() && posledni[p]) { el.value = posledni[p]; doplneno.push(p); }
+  }
+  if (doplneno.length) toast("Doplněno z posledního záznamu");
+}
+
+for (const [pole, sel] of Object.entries(POLE_NAVRHY)) {
+  const el = $(sel);
+  el.addEventListener("focus", () => ukazNavrhy(pole));
+  el.addEventListener("input", () => ukazNavrhy(pole));
+  el.addEventListener("blur", () => setTimeout(() => { if (navrhyPole === pole) skryjNavrhy(); }, 150));
+  el.addEventListener("keydown", (e) => { if (e.key === "Escape") skryjNavrhy(); });
+}
 
 async function nactiAudio(cesta) {
   const { data, error } = await sb.storage.from("nahravky").createSignedUrl(cesta, 3600);
