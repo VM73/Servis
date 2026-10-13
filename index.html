@@ -347,6 +347,27 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
 .navrhy span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .navrhy mark { background: none; color: var(--blue); font-weight: 600; }
 .navrhy small { color: var(--label2); font-size: 13px; flex: none; }
+.nav-vpravo { display: flex; align-items: center; gap: 14px; }
+.nav-vpravo .nav-btn { min-width: 30px; }
+.akce-pozadi {
+  position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,.35);
+  display: flex; align-items: flex-end; justify-content: center;
+  padding: 0 8px calc(8px + env(safe-area-inset-bottom));
+}
+.akce-sheet { width: 100%; max-width: 500px; animation: vyjet .25s cubic-bezier(.2,.8,.2,1); }
+@keyframes vyjet { from { transform: translateY(100%); } }
+.akce-skupina {
+  background: var(--nav); -webkit-backdrop-filter: blur(30px); backdrop-filter: blur(30px);
+  border-radius: 14px; overflow: hidden; margin-top: 8px;
+}
+.akce-titul { text-align: center; font-size: 13px; color: var(--label2); padding: 14px 16px; }
+.akce-skupina button {
+  display: block; width: 100%; height: 57px; font-size: 20px; color: var(--blue);
+  border-top: .5px solid var(--sep);
+}
+.akce-skupina button:first-child { border-top: 0; }
+.akce-skupina button:active { background: var(--fill2); }
+.akce-skupina button.tucne { font-weight: 600; }
 .verze { text-align: center; color: var(--label3); font-size: 12px; margin-top: 18px; }
 </style>
 </head>
@@ -366,7 +387,7 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
     <button class="velke-tlacitko" id="btn-prihlasit" type="submit">Přihlásit</button>
     <div class="chyba" id="p-chyba"></div>
   </form>
-  <div class="verze">verze 4 · rozsah dní, návrhy</div>
+  <div class="verze">verze 5 · export</div>
 </section>
 
 <!-- ============ SEZNAM ============ -->
@@ -375,9 +396,14 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
     <div class="nav-radek">
       <button class="nav-btn" id="btn-odhlasit">Odhlásit</button>
       <div class="nav-titul">Záznamy</div>
-      <button class="nav-btn vpravo" id="btn-novy" aria-label="Nový záznam">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-      </button>
+      <div class="nav-vpravo">
+        <button class="nav-btn vpravo" id="btn-export" aria-label="Export">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7.5 7.5 12 3l4.5 4.5"/><path d="M8 10H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-2"/></svg>
+        </button>
+        <button class="nav-btn vpravo" id="btn-novy" aria-label="Nový záznam">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
     </div>
   </header>
 
@@ -526,6 +552,20 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
   </div>
   <img id="prohlizec-img" alt="">
 </section>
+
+<!-- ============ EXPORT (action sheet) ============ -->
+<div class="akce-pozadi skryto" id="export-pozadi">
+  <div class="akce-sheet" role="dialog" aria-label="Export">
+    <div class="akce-skupina">
+      <div class="akce-titul" id="export-titul">Export</div>
+      <button id="exp-soubor">Uložit do souboru (Excel)</button>
+      <button id="exp-sdilet">Sdílet soubor…</button>
+      <button id="exp-text">Kopírovat text</button>
+      <button id="exp-predmet">Kopírovat předmět</button>
+    </div>
+    <div class="akce-skupina"><button id="exp-zrusit" class="tucne">Zrušit</button></div>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -897,6 +937,164 @@ function ctiKm(v) {
   if (!Number.isFinite(km) || km < 0 || km > 99999) throw new Error(`Neplatná hodnota v poli Cesta: „${v}“`);
   return Math.round(km * 10) / 10;
 }
+
+// ---------- export ----------
+const NAZVY_OBDOBI = { vse: "", mesic: "tento měsíc", minuly: "minulý měsíc", rok: "tento rok" };
+
+function popisFiltru() {
+  const casti = [];
+  casti.push(stav.typ === "montaz" ? "Montáže" : stav.typ === "servis" ? "Servisy" : "Servisy a montáže");
+  if (stav.obdobi !== "vse") {
+    const [od, doo] = rozsahObdobi(stav.obdobi);
+    casti.push(`${NAZVY_OBDOBI[stav.obdobi]} (${fmtDatumPlne(od)} – ${fmtDatumPlne(doo)})`);
+  }
+  if (stav.q.trim()) casti.push(`hledání „${stav.q.trim()}“`);
+  if (stav.kontrola) casti.push("ke kontrole");
+  if (stav.fotky) casti.push("s fotkami");
+  return casti.join(", ");
+}
+function fmtDatumPlne(d) {
+  if (!d) return "";
+  const [y, m, den] = d.split("-").map(Number);
+  return `${den}. ${m}. ${y}`;
+}
+function cisloCsv(v) { return v == null || v === "" ? "" : String(Math.round(Number(v) * 100) / 100).replace(".", ","); }
+function bunkaCsv(v) {
+  const t = String(v ?? "");
+  return /[";\n\r]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+}
+function souhrnVyberu(rows) {
+  let prace = 0, cesta = 0, km = 0;
+  for (const z of rows) {
+    prace += Number(z.prace_hod) || 0;
+    cesta += (Number(z.cesta_tam_hod) || 0) + (Number(z.cesta_zpet_hod) || 0);
+    km += Number(z.cesta_km) || 0;
+  }
+  return { prace, cesta, km };
+}
+function pocetZaznamu(n) { return `${n} ${n === 1 ? "záznam" : n >= 2 && n <= 4 ? "záznamy" : "záznamů"}`; }
+function vyberProExport() {
+  // stejné pořadí jako v seznamu, ale od nejstaršího (lépe se čte v tabulce)
+  return [...filtruj()].sort((a, b) => (a.datum_zasahu || "").localeCompare(b.datum_zasahu || ""));
+}
+
+// CSV pro český Excel: středník, desetinná čárka, UTF-8 s BOM
+function vytvorCsv(rows) {
+  const hlavicka = ["Datum", "Den", "Typ", "Akce", "Místo", "Zákazník", "Zařízení", "Předmět / provedená práce",
+    "Materiál", "Náhradní díly", "Práce [h]", "Cesta tam [h]", "Cesta zpět [h]", "Cesta [km]", "Ke kontrole"];
+  const radky = [hlavicka];
+  for (const z of rows) {
+    const [y, m, d] = (z.datum_zasahu || "").split("-").map(Number);
+    radky.push([
+      z.datum_zasahu ? `${d}.${m}.${y}` : "",
+      z.datum_zasahu ? DNY_TYDNE[new Date(y, m - 1, d).getDay()] : "",
+      z.typ === "montaz" ? "Montáž" : "Servis",
+      z.akce, z.misto, z.zakaznik, z.zarizeni, z.predmet, z.material, z.nahradni_dily,
+      cisloCsv(z.prace_hod), cisloCsv(z.cesta_tam_hod), cisloCsv(z.cesta_zpet_hod), cisloCsv(z.cesta_km),
+      z.ke_kontrole ? "ano" : "",
+    ]);
+  }
+  const s = souhrnVyberu(rows);
+  radky.push([]);
+  radky.push(["Celkem", "", pocetZaznamu(rows.length), "", "", "", "", "", "", "",
+    cisloCsv(s.prace), "", s.cesta ? cisloCsv(s.cesta) : "", cisloCsv(s.km), ""]);
+  radky.push(["Výběr", popisFiltru()]);
+  return "\uFEFF" + radky.map((r) => r.map(bunkaCsv).join(";")).join("\r\n");
+}
+
+function vytvorText(rows) {
+  const s = souhrnVyberu(rows);
+  const out = [`${popisFiltru()}`, [pocetZaznamu(rows.length), `práce ${fmtCislo(s.prace)} h`, s.cesta ? `cesta ${fmtCislo(s.cesta)} h` : "", s.km ? `${fmtCislo(s.km)} km` : ""].filter(Boolean).join(" · "), ""];
+  for (const z of rows) {
+    const [y, m, d] = (z.datum_zasahu || "").split("-").map(Number);
+    const hlava = z.typ === "montaz"
+      ? `MONTÁŽ ${z.akce || ""}`.trim()
+      : [z.zakaznik, z.misto].filter(Boolean).join(", ") || "Servis";
+    out.push(`${d}. ${m}. ${y} – ${hlava}`);
+    if (z.typ === "montaz" && (z.misto || z.zakaznik)) out.push(`  ${[z.zakaznik, z.misto].filter(Boolean).join(", ")}`);
+    if (z.zarizeni) out.push(`  Zařízení: ${z.zarizeni}`);
+    if (z.predmet) out.push(`  ${z.typ === "montaz" ? "Práce" : "Předmět"}: ${z.predmet}`);
+    if (z.material) out.push(`  Materiál: ${z.material}`);
+    if (z.nahradni_dily) out.push(`  Náhradní díly: ${z.nahradni_dily}`);
+    const cisla = [];
+    if (z.prace_hod != null) cisla.push(`práce ${fmtCislo(Number(z.prace_hod))} h`);
+    const ct = (Number(z.cesta_tam_hod) || 0) + (Number(z.cesta_zpet_hod) || 0);
+    if (ct) cisla.push(`cesta ${fmtCislo(ct)} h`);
+    if (z.cesta_km != null) cisla.push(`${fmtCislo(Number(z.cesta_km))} km`);
+    if (cisla.length) out.push(`  ${cisla.join(" · ")}`);
+    out.push("");
+  }
+  return out.join("\n").trim();
+}
+
+function vytvorPredmet(rows) {
+  return `Záznamy – ${popisFiltru()} (${rows.length})`;
+}
+
+function nazevSouboru() {
+  const typ = stav.typ === "montaz" ? "montaze" : stav.typ === "servis" ? "servisy" : "zaznamy";
+  const [od, doo] = rozsahObdobi(stav.obdobi);
+  const obdobi = od ? `_${od}_${doo}` : "";
+  return `${typ}${obdobi}_export_${dnes()}.csv`;
+}
+
+async function kopiruj(text, hlaska) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    // záloha pro starší prohlížeče
+    const t = document.createElement("textarea");
+    t.value = text; t.setAttribute("readonly", ""); t.style.position = "fixed"; t.style.opacity = "0";
+    document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove();
+  }
+  toast(hlaska);
+}
+
+function zavriExport() { $("#export-pozadi").classList.add("skryto"); }
+
+$("#btn-export").addEventListener("click", () => {
+  const n = filtruj().length;
+  if (!n) { toast("Ve výběru nejsou žádné záznamy", true); return; }
+  $("#export-titul").textContent = `Export: ${pocetZaznamu(n)} · ${popisFiltru()}`;
+  const lzeSdilet = !!(navigator.canShare && navigator.canShare({ files: [new File(["x"], "x.csv", { type: "text/csv" })] }));
+  $("#exp-sdilet").classList.toggle("skryto", !lzeSdilet);
+  $("#export-pozadi").classList.remove("skryto");
+});
+$("#export-pozadi").addEventListener("click", (e) => { if (e.target.id === "export-pozadi") zavriExport(); });
+$("#exp-zrusit").addEventListener("click", zavriExport);
+
+$("#exp-soubor").addEventListener("click", akce(async () => {
+  const rows = vyberProExport();
+  const blob = new Blob([vytvorCsv(rows)], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = nazevSouboru();
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  zavriExport();
+  log("export CSV", rows.length);
+  toast("Soubor uložen");
+}));
+$("#exp-sdilet").addEventListener("click", akce(async () => {
+  const rows = vyberProExport();
+  const soubor = new File([vytvorCsv(rows)], nazevSouboru(), { type: "text/csv" });
+  zavriExport();
+  try {
+    await navigator.share({ files: [soubor], title: vytvorPredmet(rows) });
+  } catch (e) {
+    if (e?.name !== "AbortError") throw e;
+  }
+}));
+$("#exp-text").addEventListener("click", akce(async () => {
+  const rows = vyberProExport();
+  zavriExport();
+  await kopiruj(vytvorText(rows), "Text zkopírován");
+}));
+$("#exp-predmet").addEventListener("click", akce(async () => {
+  const rows = vyberProExport();
+  zavriExport();
+  await kopiruj(vytvorPredmet(rows), "Předmět zkopírován");
+}));
 
 // ---------- vícedenní zadání ----------
 const DNY_TYDNE = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
