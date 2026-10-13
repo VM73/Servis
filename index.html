@@ -146,6 +146,8 @@ input, textarea { font: inherit; color: inherit; }
   flex: 1 0 auto; padding: 6px 10px; font-size: 13px; font-weight: 500; border-radius: 7px; white-space: nowrap;
   transition: background .15s;
 }
+#seg-rozsah { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; }
+#seg-rozsah button { padding: 6px 4px; }
 .segment button.on { background: var(--seg-on); font-weight: 600; box-shadow: 0 3px 8px rgba(0,0,0,.12), 0 3px 1px rgba(0,0,0,.04); }
 
 .pilulky { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
@@ -321,6 +323,7 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
   color: #fff; background: var(--indigo); border-radius: 5px; padding: 2px 6px; margin-right: 6px;
   vertical-align: 2px;
 }
+.stitek.servis { background: var(--orange); }
 .souhrn div { padding: 10px 10px; }
 .souhrn b { font-size: 18px; }
 .sheet.vice .jen-jeden, .sheet:not(.vice) .jen-vice { display: none !important; }
@@ -387,7 +390,7 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
     <button class="velke-tlacitko" id="btn-prihlasit" type="submit">Přihlásit</button>
     <div class="chyba" id="p-chyba"></div>
   </form>
-  <div class="verze">verze 5 · export</div>
+  <div class="verze">verze 8 · návrhy i pro předmět</div>
 </section>
 
 <!-- ============ SEZNAM ============ -->
@@ -430,6 +433,7 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
       <button data-v="misto">Místo</button>
       <button data-v="zakaznik">Zákazník</button>
       <button data-v="zarizeni">Zařízení</button>
+      <button data-v="predmet">Předmět</button>
       <button data-v="material">Materiál</button>
       <button data-v="dily">Díly</button>
     </div>
@@ -595,6 +599,7 @@ const ROZSAH = {
   zakaznik: ["zakaznik"],
   zarizeni: ["zarizeni"],
   material: ["material"],
+  predmet: ["predmet"],
   dily: ["nahradni_dily"],
 };
 const SLOUPCE = "id,skupina,typ,akce,datum_zasahu,vytvoreno,misto,zakaznik,zarizeni,predmet,material,nahradni_dily," +
@@ -838,7 +843,7 @@ function vykresli() {
       const popis = z.predmet || (!z.zakaznik && !z.misto && !z.akce ? z.prepis : "");
       html += `<button class="bunka" data-id="${esc(z.id)}">
         <div class="bunka-telo">
-          <div class="bunka-r1"><span class="bunka-nazev">${montaz ? '<span class="stitek">Montáž</span>' : ""}${esc(nazev)}</span><span class="bunka-datum">${esc(fmtDatum(z.datum_zasahu))}</span></div>
+          <div class="bunka-r1"><span class="bunka-nazev">${montaz ? '<span class="stitek">Montáž</span>' : '<span class="stitek servis">Servis</span>'}${esc(nazev)}</span><span class="bunka-datum">${esc(fmtDatum(z.datum_zasahu))}</span></div>
           ${z.zarizeni ? `<div class="bunka-r2">${esc(z.zarizeni)}</div>` : ""}
           ${popis ? `<div class="bunka-r3">${esc(popis)}</div>` : ""}
           ${znacky.length ? `<div class="znacky">${znacky.join("")}</div>` : ""}
@@ -1410,8 +1415,11 @@ $("#btn-smazat").addEventListener("click", akce(async () => {
 // ---------- návrhy hodnot (našeptávač) ----------
 const POLE_NAVRHY = {
   akce: "#f-akce", misto: "#f-misto", zakaznik: "#f-zakaznik", zarizeni: "#f-zarizeni",
-  material: "#f-material", nahradni_dily: "#f-dily",
+  predmet: "#f-predmet", material: "#f-material", nahradni_dily: "#f-dily",
 };
+// vícepoložková pole: návrhy se nabízejí i po jednotlivých položkách oddělených čárkou / středníkem
+// a vybraná položka nahradí jen právě psanou část textu
+const VICEPOLOZKOVA = new Set(["predmet", "material", "nahradni_dily"]);
 let indexNavrhu = {};   // pole → [{ hodnota, n, posledni, norm }]
 
 function postavIndexNavrhu() {
@@ -1419,13 +1427,22 @@ function postavIndexNavrhu() {
   for (const pole of Object.keys(POLE_NAVRHY)) {
     const m = new Map();
     for (const z of zaznamy) {
-      const v = (z[pole] || "").trim();
-      if (!v) continue;
-      const k = norm(v);
-      const e = m.get(k) || { hodnota: v, n: 0, posledni: "" };
-      e.n++;
-      if ((z.datum_zasahu || "") > e.posledni) { e.posledni = z.datum_zasahu || ""; e.hodnota = v; }
-      m.set(k, e);
+      const cela = (z[pole] || "").trim();
+      if (!cela) continue;
+      const hodnoty = new Set([cela]);
+      if (VICEPOLOZKOVA.has(pole)) {
+        for (const cast of cela.split(/[;\n]|,(?!\d)/)) {   // "1,2 kg" se nedělí
+          const c = cast.trim().replace(/\.$/, "");
+          if (c.length >= 3) hodnoty.add(c);
+        }
+      }
+      for (const v of hodnoty) {
+        const k = norm(v);
+        const e = m.get(k) || { hodnota: v, n: 0, posledni: "" };
+        e.n++;
+        if ((z.datum_zasahu || "") > e.posledni) { e.posledni = z.datum_zasahu || ""; e.hodnota = v; }
+        m.set(k, e);
+      }
     }
     indexNavrhu[pole] = [...m.entries()].map(([k, e]) => ({ ...e, norm: k }));
   }
@@ -1457,23 +1474,35 @@ function skryjNavrhy() {
   document.querySelectorAll(".navrhy").forEach((n) => n.remove());
   navrhyPole = null;
 }
+// u vícepoložkových polí se hledá jen podle právě psané části (za poslední čárkou)
+function rozdelVstup(pole, text) {
+  if (!VICEPOLOZKOVA.has(pole)) return { pred: "", dotaz: text };
+  const m = text.match(/^(.*(?:[;\n]|,(?!\d))\s*)?(.*?)$/s);
+  return { pred: m?.[1] ?? "", dotaz: m?.[2] ?? text };
+}
 function ukazNavrhy(pole) {
   const vstup = $(POLE_NAVRHY[pole]);
-  const seznam = najdiNavrhy(pole, vstup.value);
+  const { pred, dotaz } = rozdelVstup(pole, vstup.value);
+  const uzZadane = new Set(pred.split(/[;\n]|,(?!\d)/).map((c) => norm(c.trim())).filter(Boolean));
+  const seznam = najdiNavrhy(pole, dotaz)
+    .filter((e) => !uzZadane.has(e.norm))
+    // za čárkou nabízet jen jednotlivé položky, ne celé víceřádkové hodnoty
+    .filter((e) => !pred || !/[;\n]|,(?!\d)/.test(e.hodnota));
   document.querySelectorAll(".navrhy").forEach((n) => n.remove());
   navrhyPole = pole;
   if (!seznam.length) return;
   const box = document.createElement("div");
   box.className = "navrhy";
   box.innerHTML = seznam.map((e) =>
-    `<button type="button" data-hodnota="${esc(e.hodnota)}">${IKONY.hodiny}<span>${zvyrazni(e.hodnota, vstup.value)}</span>${e.n > 1 ? `<small>${e.n}×</small>` : ""}</button>`
+    `<button type="button" data-hodnota="${esc(e.hodnota)}">${IKONY.hodiny}<span>${zvyrazni(e.hodnota, dotaz)}</span>${e.n > 1 ? `<small>${e.n}×</small>` : ""}</button>`
   ).join("");
   box.addEventListener("pointerdown", (ev) => ev.preventDefault());   // nezavírat klávesnici
   box.addEventListener("click", (ev) => {
     const b = ev.target.closest("button");
     if (!b) return;
-    vstup.value = b.dataset.hodnota;
+    vstup.value = pred + b.dataset.hodnota;
     if (vstup.tagName === "TEXTAREA") prizpusobVysku(vstup);
+    vstup.setSelectionRange?.(vstup.value.length, vstup.value.length);
     skryjNavrhy();
     predvypln(pole, b.dataset.hodnota);
   });
