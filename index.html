@@ -52,6 +52,7 @@ document.addEventListener("DOMContentLoaded", function () {
   --red: #ff3b30;
   --orange: #ff9500;
   --green: #34c759;
+  --indigo: #5856d6;
   --switch-off: #e9e9eb;
   color-scheme: light dark;
 }
@@ -73,6 +74,7 @@ document.addEventListener("DOMContentLoaded", function () {
     --red: #ff453a;
     --orange: #ff9f0a;
     --green: #30d158;
+    --indigo: #5e5ce6;
     --switch-off: #39393d;
   }
 }
@@ -156,7 +158,7 @@ input, textarea { font: inherit; color: inherit; }
 
 /* ---------- souhrn ---------- */
 .souhrn {
-  display: grid; grid-template-columns: repeat(3, 1fr);
+  display: grid; grid-template-columns: repeat(4, 1fr);
   background: var(--card); border-radius: 10px; margin-top: 16px; overflow: hidden;
 }
 .souhrn div { padding: 10px 12px; }
@@ -310,6 +312,16 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
   padding: 12px 14px; font: 13px/1.4 ui-monospace, Menlo, monospace; white-space: pre-wrap; word-break: break-word;
   max-height: 60vh; overflow: auto; -webkit-user-select: text; user-select: text;
 }
+.typ-segment { margin-top: 16px; }
+.typ-segment button { font-size: 15px; padding: 7px 10px; }
+.sheet.montaz .jen-servis, .sheet:not(.montaz) .jen-montaz { display: none; }
+.stitek {
+  display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase;
+  color: #fff; background: var(--indigo); border-radius: 5px; padding: 2px 6px; margin-right: 6px;
+  vertical-align: 2px;
+}
+.souhrn div { padding: 10px 10px; }
+.souhrn b { font-size: 18px; }
 .verze { text-align: center; color: var(--label3); font-size: 12px; margin-top: 18px; }
 </style>
 </head>
@@ -329,7 +341,7 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
     <button class="velke-tlacitko" id="btn-prihlasit" type="submit">Přihlásit</button>
     <div class="chyba" id="p-chyba"></div>
   </form>
-  <div class="verze">verze 2</div>
+  <div class="verze">verze 3 · montáže</div>
 </section>
 
 <!-- ============ SEZNAM ============ -->
@@ -355,8 +367,15 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
       </button>
     </div>
 
+    <div class="segment" id="seg-typ">
+      <button data-v="vse" class="on">Vše</button>
+      <button data-v="servis">Servisy</button>
+      <button data-v="montaz">Montáže</button>
+    </div>
+
     <div class="segment" id="seg-rozsah">
       <button data-v="vse" class="on">Vše</button>
+      <button data-v="akce">Akce</button>
       <button data-v="misto">Místo</button>
       <button data-v="zakaznik">Zákazník</button>
       <button data-v="zarizeni">Zařízení</button>
@@ -384,6 +403,7 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
       <div><small>Záznamů</small><b id="s-pocet">0</b></div>
       <div><small>Práce</small><b id="s-prace">0 h</b></div>
       <div><small>Cesta</small><b id="s-cesta">0 h</b></div>
+      <div><small>Km</small><b id="s-km">0</b></div>
     </div>
 
     <div id="seznam"><div class="stred"><span class="nacitani"></span></div></div>
@@ -400,17 +420,23 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
     </div>
   </div>
   <div class="sheet-obsah" id="sheet-obsah">
-    <div class="sekce-hlavicka">Zásah</div>
+    <div class="segment typ-segment" id="f-typ">
+      <button data-v="servis" class="on">Servis</button>
+      <button data-v="montaz">Montáž</button>
+    </div>
+
+    <div class="sekce-hlavicka" id="h-zasah">Zásah</div>
     <div class="form-skupina">
+      <div class="pole jen-montaz"><label for="f-akce">Akce</label><input id="f-akce" placeholder="Název akce / zakázky" autocomplete="off"></div>
       <div class="pole"><label for="f-datum">Datum</label><input id="f-datum" type="date"></div>
       <div class="pole"><label for="f-misto">Místo</label><input id="f-misto" placeholder="Obec, adresa" autocomplete="off"></div>
       <div class="pole"><label for="f-zakaznik">Zákazník</label><input id="f-zakaznik" placeholder="Jméno nebo firma" autocomplete="off"></div>
       <div class="pole"><label for="f-zarizeni">Zařízení</label><input id="f-zarizeni" placeholder="Výrobce, typ, s/n" autocomplete="off"></div>
     </div>
 
-    <div class="sekce-hlavicka">Servis / oprava</div>
+    <div class="sekce-hlavicka" id="h-prace">Servis / oprava</div>
     <div class="form-skupina">
-      <div class="pole svisle"><label for="f-predmet">Předmět servisu / opravy</label><textarea id="f-predmet" rows="2" placeholder="Závada a provedená práce"></textarea></div>
+      <div class="pole svisle"><label for="f-predmet" id="l-predmet">Předmět servisu / opravy</label><textarea id="f-predmet" rows="2" placeholder="Závada a provedená práce"></textarea></div>
       <div class="pole svisle"><label for="f-material">Materiál</label><textarea id="f-material" rows="1" placeholder="Chladivo, filtry, izolace…"></textarea></div>
       <div class="pole svisle"><label for="f-dily">Náhradní díly</label><textarea id="f-dily" rows="1" placeholder="Kondenzátor, deska, ventilátor…"></textarea></div>
     </div>
@@ -418,11 +444,12 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
     <div class="sekce-hlavicka">Čas</div>
     <div class="form-skupina">
       <div class="pole"><label for="f-prace">Práce</label><input id="f-prace" inputmode="decimal" placeholder="0" autocomplete="off"><span class="jednotka">h</span></div>
-      <div class="pole"><label for="f-tam">Cesta tam</label><input id="f-tam" inputmode="decimal" placeholder="0" autocomplete="off"><span class="jednotka">h</span></div>
-      <div class="pole"><label for="f-zpet">Cesta zpět</label><input id="f-zpet" inputmode="decimal" placeholder="0" autocomplete="off"><span class="jednotka">h</span></div>
-      <div class="pole"><label>Celkem</label><span class="hodnota" id="f-celkem">–</span></div>
+      <div class="pole jen-servis"><label for="f-tam">Cesta tam</label><input id="f-tam" inputmode="decimal" placeholder="0" autocomplete="off"><span class="jednotka">h</span></div>
+      <div class="pole jen-servis"><label for="f-zpet">Cesta zpět</label><input id="f-zpet" inputmode="decimal" placeholder="0" autocomplete="off"><span class="jednotka">h</span></div>
+      <div class="pole jen-servis"><label>Celkem</label><span class="hodnota" id="f-celkem">–</span></div>
+      <div class="pole"><label for="f-km">Cesta</label><input id="f-km" inputmode="decimal" placeholder="0" autocomplete="off"><span class="jednotka">km</span></div>
     </div>
-    <div class="form-pozn">Hodiny jako 1,5 nebo 1:30.</div>
+    <div class="form-pozn">Hodiny jako 1,5 nebo 1:30. Kilometry celkem tam i zpět.</div>
 
     <div class="sekce-hlavicka">Fotky</div>
     <div class="form-skupina">
@@ -484,21 +511,22 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY.trim());
 console.log("[servis] start, klíč:", SUPABASE_KEY.slice(0, 16) + "…");
 const $ = (s) => document.querySelector(s);
 
-const POLE_TEXT = ["misto", "zakaznik", "zarizeni", "predmet", "material", "nahradni_dily", "prepis"];
+const POLE_TEXT = ["akce", "misto", "zakaznik", "zarizeni", "predmet", "material", "nahradni_dily", "prepis"];
 const ROZSAH = {
   vse: POLE_TEXT,
+  akce: ["akce"],
   misto: ["misto"],
   zakaznik: ["zakaznik"],
   zarizeni: ["zarizeni"],
   material: ["material"],
   dily: ["nahradni_dily"],
 };
-const SLOUPCE = "id,datum_zasahu,vytvoreno,misto,zakaznik,zarizeni,predmet,material,nahradni_dily," +
-  "prace_hod,cesta_tam_hod,cesta_zpet_hod,prepis,audio_cesta,fotky,ke_kontrole";
+const SLOUPCE = "id,typ,akce,datum_zasahu,vytvoreno,misto,zakaznik,zarizeni,predmet,material,nahradni_dily," +
+  "prace_hod,cesta_tam_hod,cesta_zpet_hod,cesta_km,prepis,audio_cesta,fotky,ke_kontrole";
 
 let uzivatel = null;
 let zaznamy = [];
-const stav = { q: "", rozsah: "vse", obdobi: "vse", kontrola: false, fotky: false };
+const stav = { q: "", typ: "vse", rozsah: "vse", obdobi: "vse", kontrola: false, fotky: false };
 let aktualni = null;      // otevřený záznam
 let zmeneno = false;      // po zavření detailu znovu načíst seznam
 let prohlizenaFotka = null;
@@ -514,6 +542,13 @@ const IKONY = {
 };
 
 // ---------- pomocné ----------
+function noveId() {
+  if (window.crypto?.randomUUID) return crypto.randomUUID();
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 15) | 64; b[8] = (b[8] & 63) | 128;
+  const h = [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
 function log(...a) { console.log("[servis]", ...a); }
 function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -656,6 +691,7 @@ function filtruj() {
   const pole = ROZSAH[stav.rozsah];
   const [od, doo] = rozsahObdobi(stav.obdobi);
   return zaznamy.filter((z) => {
+    if (stav.typ !== "vse" && (z.typ || "servis") !== stav.typ) return false;
     if (stav.kontrola && !z.ke_kontrole) return false;
     if (stav.fotky && !z.fotky.length) return false;
     if (od && (z.datum_zasahu < od || z.datum_zasahu > doo)) return false;
@@ -668,14 +704,16 @@ function filtruj() {
 function vykresli() {
   const vysledek = filtruj();
 
-  let prace = 0, cesta = 0;
+  let prace = 0, cesta = 0, km = 0;
   for (const z of vysledek) {
     prace += Number(z.prace_hod) || 0;
     cesta += (Number(z.cesta_tam_hod) || 0) + (Number(z.cesta_zpet_hod) || 0);
+    km += Number(z.cesta_km) || 0;
   }
   $("#s-pocet").textContent = vysledek.length;
   $("#s-prace").textContent = fmtCislo(prace) + " h";
   $("#s-cesta").textContent = fmtCislo(cesta) + " h";
+  $("#s-km").textContent = Math.round(km).toLocaleString("cs-CZ");
 
   if (!vysledek.length) {
     const nic = !zaznamy.length;
@@ -695,17 +733,22 @@ function vykresli() {
   for (const [k, polozky] of skupiny) {
     html += `<div class="sekce-hlavicka">${esc(nazevMesice(k))}</div><div class="skupina">`;
     for (const z of polozky) {
-      const nazev = [z.zakaznik, z.misto].filter(Boolean).join(" · ") || "Bez zákazníka";
+      const montaz = z.typ === "montaz";
+      const nazev = montaz
+        ? [z.akce, z.akce && z.misto && norm(z.akce).includes(norm(z.misto)) ? "" : z.misto]
+            .filter(Boolean).join(" · ") || "Montáž bez názvu"
+        : [z.zakaznik, z.misto].filter(Boolean).join(" · ") || "Bez zákazníka";
       const cestaZ = (Number(z.cesta_tam_hod) || 0) + (Number(z.cesta_zpet_hod) || 0);
       const znacky = [];
       if (z.ke_kontrole) znacky.push(`<span class="varovani">${IKONY.pozor}Ke kontrole</span>`);
       if (z.prace_hod != null) znacky.push(`<span>${IKONY.prace}${fmtH(Number(z.prace_hod))}</span>`);
       if (cestaZ) znacky.push(`<span>${IKONY.auto}${fmtH(cestaZ)}</span>`);
+      if (z.cesta_km != null) znacky.push(`<span>${montaz || !cestaZ ? IKONY.auto : ""}${fmtCislo(Number(z.cesta_km))} km</span>`);
       if (z.fotky.length) znacky.push(`<span>${IKONY.foto}${z.fotky.length}</span>`);
-      const popis = z.predmet || (!z.zakaznik && !z.misto ? z.prepis : "");
+      const popis = z.predmet || (!z.zakaznik && !z.misto && !z.akce ? z.prepis : "");
       html += `<button class="bunka" data-id="${esc(z.id)}">
         <div class="bunka-telo">
-          <div class="bunka-r1"><span class="bunka-nazev">${esc(nazev)}</span><span class="bunka-datum">${esc(fmtDatum(z.datum_zasahu))}</span></div>
+          <div class="bunka-r1"><span class="bunka-nazev">${montaz ? '<span class="stitek">Montáž</span>' : ""}${esc(nazev)}</span><span class="bunka-datum">${esc(fmtDatum(z.datum_zasahu))}</span></div>
           ${z.zarizeni ? `<div class="bunka-r2">${esc(z.zarizeni)}</div>` : ""}
           ${popis ? `<div class="bunka-r3">${esc(popis)}</div>` : ""}
           ${znacky.length ? `<div class="znacky">${znacky.join("")}</div>` : ""}
@@ -746,6 +789,7 @@ function segment(id, klic) {
     vykresli();
   });
 }
+segment("#seg-typ", "typ");
 segment("#seg-rozsah", "rozsah");
 segment("#seg-obdobi", "obdobi");
 
@@ -773,21 +817,48 @@ document.addEventListener("visibilitychange", () => {
 
 // ---------- detail ----------
 const POLE_FORM = {
-  misto: "#f-misto", zakaznik: "#f-zakaznik", zarizeni: "#f-zarizeni",
+  akce: "#f-akce", misto: "#f-misto", zakaznik: "#f-zakaznik", zarizeni: "#f-zarizeni",
   predmet: "#f-predmet", material: "#f-material", nahradni_dily: "#f-dily",
 };
 
 function prizpusobVysku(t) { t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }
 document.querySelectorAll(".sheet textarea").forEach((t) => t.addEventListener("input", () => prizpusobVysku(t)));
 
+// přepnutí Servis / Montáž v detailu
+function nastavTyp(typ) {
+  const montaz = typ === "montaz";
+  $("#sheet").classList.toggle("montaz", montaz);
+  $("#f-typ").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.v === typ));
+  $("#h-zasah").textContent = montaz ? "Montáž" : "Zásah";
+  $("#h-prace").textContent = montaz ? "Provedená práce" : "Servis / oprava";
+  $("#l-predmet").textContent = montaz ? "Co se udělalo" : "Předmět servisu / opravy";
+  $("#f-predmet").placeholder = montaz ? "Osazení jednotek, potrubí, kabeláž…" : "Závada a provedená práce";
+  if (aktualni) aktualni.typ = typ;
+}
+$("#f-typ").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (b) nastavTyp(b.dataset.v);
+});
+
+function ctiKm(v) {
+  v = (v ?? "").trim().replace(/\s/g, "");
+  if (!v) return null;
+  const km = Number(v.replace(",", "."));
+  if (!Number.isFinite(km) || km < 0 || km > 99999) throw new Error(`Neplatná hodnota v poli Cesta: „${v}“`);
+  return Math.round(km * 10) / 10;
+}
+
 function otevri(z) {
   const novy = !z;
   aktualni = novy
-    ? { id: crypto.randomUUID(), isNew: true, fotky: [], datum_zasahu: dnes(), ke_kontrole: false }
-    : { ...z, fotky: [...z.fotky] };
+    ? { id: noveId(), isNew: true, fotky: [], datum_zasahu: dnes(), ke_kontrole: false,
+        typ: stav.typ === "montaz" ? "montaz" : "servis" }
+    : { ...z, fotky: [...z.fotky], typ: z.typ || "servis" };
   zmeneno = false;
 
-  $("#sheet-titul").textContent = novy ? "Nový záznam" : "Záznam";
+  nastavTyp(aktualni.typ);
+  $("#f-km").value = aktualni.cesta_km != null ? fmtCislo(Number(aktualni.cesta_km)) : "";
+  $("#sheet-titul").textContent = novy ? (aktualni.typ === "montaz" ? "Nová montáž" : "Nový záznam") : "Záznam";
   $("#f-datum").value = aktualni.datum_zasahu || dnes();
   for (const [p, sel] of Object.entries(POLE_FORM)) $(sel).value = aktualni[p] ?? "";
   $("#f-prace").value = aktualni.prace_hod != null ? fmtCislo(Number(aktualni.prace_hod)) : "";
@@ -836,11 +907,13 @@ function prepoctiCelkem() {
 ["#f-prace", "#f-tam", "#f-zpet"].forEach((s) => $(s).addEventListener("input", prepoctiCelkem));
 
 function ctiFormular() {
-  const d = { datum_zasahu: $("#f-datum").value || dnes() };
+  const d = { datum_zasahu: $("#f-datum").value || dnes(), typ: aktualni.typ || "servis" };
   for (const [p, sel] of Object.entries(POLE_FORM)) d[p] = $(sel).value.trim() || null;
   d.prace_hod = ctiHodiny($("#f-prace").value, "Práce");
   d.cesta_tam_hod = ctiHodiny($("#f-tam").value, "Cesta tam");
   d.cesta_zpet_hod = ctiHodiny($("#f-zpet").value, "Cesta zpět");
+  d.cesta_km = ctiKm($("#f-km").value);
+  if (d.typ !== "montaz") d.akce = null;
   d.ke_kontrole = $("#f-kontrola").checked;
   return d;
 }
@@ -982,7 +1055,7 @@ $("#vstup-fotky").addEventListener("change", akce(async (e) => {
     for (let i = 0; i < soubory.length; i++) {
       text.textContent = `Nahrávám ${i + 1} / ${soubory.length}…`;
       const blob = await zmensi(soubory[i]);
-      const cesta = `${uzivatel.id}/${aktualni.id}/${crypto.randomUUID()}.jpg`;
+      const cesta = `${uzivatel.id}/${aktualni.id}/${noveId()}.jpg`;
       const { error } = await sb.storage.from("fotky").upload(cesta, blob, { contentType: "image/jpeg" });
       if (error) throw error;
       log("fotka nahrána", cesta, Math.round(blob.size / 1024) + " kB");
