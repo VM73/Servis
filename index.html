@@ -319,6 +319,35 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
 .typ-segment button { font-size: 15px; padding: 7px 10px; }
 .uct-segment { margin-top: 8px; }
 .uct-segment button { font-size: 14px; padding: 6px 8px; }
+.technici-vyber { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px; }
+.technici-vyber button {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 15px; padding: 7px 12px; border-radius: 17px; background: var(--fill); color: var(--label);
+}
+.technici-vyber button.on { background: var(--blue); color: #fff; }
+.technici-vyber .prazdne { color: var(--label2); font-size: 15px; }
+.technici-vyber .prazdne a { color: var(--blue); text-decoration: none; }
+.pilulka.vyber { position: relative; cursor: pointer; }
+.pilulka.vyber select {
+  -webkit-appearance: none; appearance: none; border: 0; background: transparent; font: inherit; color: inherit;
+  padding: 0 14px 0 0; outline: 0; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: right 4px center, right 0 center; background-size: 4px 4px; background-repeat: no-repeat;
+}
+.pilulka.vyber.on { background: var(--blue); color: #fff; }
+.technik-radek { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 12px 0 16px; position: relative; }
+.technik-radek + .technik-radek::before, #seznam-techniku:not(:empty) + .pridat-technika::before {
+  content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: .5px solid var(--sep);
+}
+.technik-radek .jmeno { flex: 1; min-width: 0; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.technik-radek .hvezda { font-size: 21px; color: var(--label3); width: 32px; height: 32px; }
+.technik-radek .hvezda.on { color: var(--orange); }
+.technik-radek .odebrat { color: var(--red); font-size: 15px; padding: 6px 4px; }
+.technik-radek .vratit { color: var(--blue); font-size: 15px; padding: 6px 4px; }
+.pridat-technika { gap: 8px; }
+.pridat-technika input { flex: 1; }
+.mini-btn { color: var(--blue); font-weight: 600; font-size: 16px; padding: 8px 4px; }
+.mini-btn:disabled { opacity: .4; }
 .rychle-ukony { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 0 12px; }
 .rychle-ukony button {
   font-size: 14px; padding: 5px 11px; border-radius: 15px; background: var(--fill); color: var(--label);
@@ -401,14 +430,14 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
     <button class="velke-tlacitko" id="btn-prihlasit" type="submit">Přihlásit</button>
     <div class="chyba" id="p-chyba"></div>
   </form>
-  <div class="verze">verze 11 · revize</div>
+  <div class="verze">verze 12 · technici</div>
 </section>
 
 <!-- ============ SEZNAM ============ -->
 <section id="aplikace" class="skryto">
   <header class="nav" id="nav">
     <div class="nav-radek">
-      <button class="nav-btn" id="btn-odhlasit">Odhlásit</button>
+      <button class="nav-btn" id="btn-nastaveni">Nastavení</button>
       <div class="nav-titul">Záznamy</div>
       <div class="nav-vpravo">
         <button class="nav-btn vpravo" id="btn-export" aria-label="Export">
@@ -464,6 +493,10 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
       <button class="pilulka" id="f-fotky-pil">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>S fotkami
       </button>
+      <label class="pilulka vyber" id="f-technik-pil">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
+        <select id="f-technik" aria-label="Technik"><option value="">Všichni technici</option></select>
+      </label>
     </div>
 
     <div class="souhrn">
@@ -508,6 +541,11 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
       <div class="pole"><label for="f-misto">Místo</label><input id="f-misto" placeholder="Obec, adresa" autocomplete="off"></div>
       <div class="pole"><label for="f-zakaznik">Zákazník</label><input id="f-zakaznik" placeholder="Jméno nebo firma" autocomplete="off"></div>
       <div class="pole"><label for="f-zarizeni">Zařízení</label><input id="f-zarizeni" placeholder="Výrobce, typ, s/n" autocomplete="off"></div>
+    </div>
+
+    <div class="sekce-hlavicka">Technici</div>
+    <div class="form-skupina">
+      <div class="technici-vyber" id="f-technici"></div>
     </div>
 
     <div class="sekce-hlavicka" id="h-prace">Servis / oprava</div>
@@ -570,6 +608,41 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
   </div>
 </section>
 
+<!-- ============ NASTAVENÍ ============ -->
+<section class="sheet" id="nastaveni" aria-hidden="true">
+  <div class="sheet-hlavicka">
+    <div class="nav-radek">
+      <span></span>
+      <div class="nav-titul">Nastavení</div>
+      <button class="nav-btn vpravo ulozit" id="btn-nastaveni-zavrit">Hotovo</button>
+    </div>
+  </div>
+  <div class="sheet-obsah">
+    <div class="sekce-hlavicka">Technici</div>
+    <div class="form-skupina">
+      <div id="seznam-techniku"></div>
+      <form class="pole pridat-technika" id="form-technik" autocomplete="off">
+        <input id="novy-technik" placeholder="Jméno a příjmení" autocapitalize="words" enterkeyhint="done">
+        <button type="submit" class="mini-btn">Přidat</button>
+      </form>
+    </div>
+    <div class="form-pozn">★ označuje tebe – při diktování „byl jsem…“ se doplníš automaticky. Klepnutím na jméno ho přejmenuješ (změní se i ve starých záznamech).</div>
+
+    <div id="sekce-odebrani" class="skryto">
+      <div class="sekce-hlavicka">Odebraní technici</div>
+      <div class="form-skupina"><div id="seznam-odebranych"></div></div>
+      <div class="form-pozn">Zůstávají ve starých záznamech, jen se už nenabízejí.</div>
+    </div>
+
+    <div style="margin-top:28px">
+      <div class="form-skupina">
+        <button class="tlacitko-bunka cervene" id="btn-odhlasit">Odhlásit</button>
+      </div>
+    </div>
+    <div class="verze" id="verze-nastaveni"></div>
+  </div>
+</section>
+
 <!-- ============ PROHLÍŽEČ FOTEK ============ -->
 <section class="prohlizec skryto" id="prohlizec">
   <div class="lista">
@@ -613,7 +686,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY.trim());
 console.log("[servis] start, klíč:", SUPABASE_KEY.slice(0, 16) + "…");
 const $ = (s) => document.querySelector(s);
 
-const POLE_TEXT = ["akce", "misto", "zakaznik", "zarizeni", "predmet", "servisni_ukony", "material", "nahradni_dily", "prepis"];
+const POLE_TEXT = ["akce", "misto", "zakaznik", "zarizeni", "technici", "predmet", "servisni_ukony", "material", "nahradni_dily", "prepis"];
 const ROZSAH = {
   vse: POLE_TEXT,
   akce: ["akce"],
@@ -625,12 +698,13 @@ const ROZSAH = {
   ukony: ["servisni_ukony"],
   dily: ["nahradni_dily"],
 };
-const SLOUPCE = "id,skupina,typ,uctovani,akce,datum_zasahu,vytvoreno,misto,zakaznik,zarizeni,predmet,servisni_ukony,material,nahradni_dily," +
+const SLOUPCE = "id,skupina,typ,uctovani,akce,datum_zasahu,vytvoreno,misto,zakaznik,zarizeni,predmet,servisni_ukony,technici,material,nahradni_dily," +
   "prace_hod,cesta_tam_hod,cesta_zpet_hod,cesta_km,prepis,audio_cesta,fotky,ke_kontrole";
 
 let uzivatel = null;
 let zaznamy = [];
-const stav = { q: "", typ: "vse", rozsah: "vse", obdobi: "vse", kontrola: false, fotky: false };
+let technici = [];   // [{ id, jmeno, ja, aktivni }]
+const stav = { technik: "", q: "", typ: "vse", rozsah: "vse", obdobi: "vse", kontrola: false, fotky: false };
 let aktualni = null;      // otevřený záznam
 let zmeneno = false;      // po zavření detailu znovu načíst seznam
 let prohlizenaFotka = null;
@@ -645,6 +719,7 @@ const IKONY = {
   hodiny: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
   kalendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
   dokument: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>',
+  osoba: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
   prazdno: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>',
 };
 
@@ -778,9 +853,10 @@ async function nacti() {
   }
   zaznamy = vse.map((z) => {
     const n = {};
-    for (const p of POLE_TEXT) n[p] = norm(z[p]);
-    return { ...z, fotky: z.fotky || [], _n: n };
+    for (const p of POLE_TEXT) n[p] = norm(Array.isArray(z[p]) ? z[p].join(" ") : z[p]);
+    return { ...z, fotky: z.fotky || [], technici: z.technici || [], _n: n };
   });
+  await nactiTechniky();
   postavIndexNavrhu();
   log("načteno záznamů:", zaznamy.length);
   vykresli();
@@ -802,6 +878,7 @@ function filtruj() {
     if (stav.typ !== "vse" && (z.typ || "servis") !== stav.typ) return false;
     if (stav.kontrola && !z.ke_kontrole) return false;
     if (stav.fotky && !z.fotky.length) return false;
+    if (stav.technik && !z.technici.includes(stav.technik)) return false;
     if (od && (z.datum_zasahu < od || z.datum_zasahu > doo)) return false;
     if (!slova.length) return true;
     const text = pole.map((p) => z._n[p]).join(" ");
@@ -862,6 +939,7 @@ function vykresli() {
       if (z.skupina && poradi.has(z.id)) znacky.push(`<span>${IKONY.kalendar}den ${poradi.get(z.id)}</span>`);
       if (z.prace_hod != null) znacky.push(`<span>${IKONY.prace}${fmtH(Number(z.prace_hod))}</span>`);
       if (cestaZ) znacky.push(`<span>${IKONY.auto}${fmtH(cestaZ)}</span>`);
+      if (z.technici.length) znacky.push(`<span>${IKONY.osoba}${esc(z.technici.map(prijmeni).join(", "))}</span>`);
       if (z.uctovani) znacky.push(`<span class="uct">${IKONY.dokument}${NAZVY_UCTOVANI[z.uctovani]}</span>`);
       if (z.cesta_km != null) znacky.push(`<span>${montaz || !cestaZ ? IKONY.auto : ""}${fmtCislo(Number(z.cesta_km))} km</span>`);
       if (z.fotky.length) znacky.push(`<span>${IKONY.foto}${z.fotky.length}</span>`);
@@ -996,6 +1074,7 @@ function popisFiltru() {
   if (stav.q.trim()) casti.push(`hledání „${stav.q.trim()}“`);
   if (stav.kontrola) casti.push("ke kontrole");
   if (stav.fotky) casti.push("s fotkami");
+  if (stav.technik) casti.push(`technik ${stav.technik}`);
   return casti.join(", ");
 }
 function fmtDatumPlne(d) {
@@ -1009,13 +1088,14 @@ function bunkaCsv(v) {
   return /[";\n\r]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
 }
 function souhrnVyberu(rows) {
-  let prace = 0, cesta = 0, km = 0;
+  let prace = 0, cesta = 0, km = 0, clovekohodiny = 0;
   for (const z of rows) {
     prace += Number(z.prace_hod) || 0;
+    clovekohodiny += (Number(z.prace_hod) || 0) * Math.max(1, (z.technici || []).length);
     cesta += (Number(z.cesta_tam_hod) || 0) + (Number(z.cesta_zpet_hod) || 0);
     km += Number(z.cesta_km) || 0;
   }
-  return { prace, cesta, km };
+  return { prace, cesta, km, clovekohodiny };
 }
 function pocetZaznamu(n) { return `${n} ${n === 1 ? "záznam" : n >= 2 && n <= 4 ? "záznamy" : "záznamů"}`; }
 function vyberProExport() {
@@ -1025,8 +1105,8 @@ function vyberProExport() {
 
 // CSV pro český Excel: středník, desetinná čárka, UTF-8 s BOM
 function vytvorCsv(rows) {
-  const hlavicka = ["Datum", "Den", "Typ", "Účtování", "Akce", "Místo", "Zákazník", "Zařízení", "Předmět / provedená práce", "Servisní úkony",
-    "Materiál", "Náhradní díly", "Práce [h]", "Cesta tam [h]", "Cesta zpět [h]", "Cesta [km]", "Ke kontrole"];
+  const hlavicka = ["Datum", "Den", "Typ", "Účtování", "Akce", "Místo", "Zákazník", "Technici", "Počet techniků", "Zařízení", "Předmět / provedená práce", "Servisní úkony",
+    "Materiál", "Náhradní díly", "Práce [h]", "Člověkohodiny [h]", "Cesta tam [h]", "Cesta zpět [h]", "Cesta [km]", "Ke kontrole"];
   const radky = [hlavicka];
   for (const z of rows) {
     const [y, m, d] = (z.datum_zasahu || "").split("-").map(Number);
@@ -1035,22 +1115,24 @@ function vytvorCsv(rows) {
       z.datum_zasahu ? DNY_TYDNE[new Date(y, m - 1, d).getDay()] : "",
       z.typ === "montaz" ? "Montáž" : "Servis",
       z.uctovani ? NAZVY_UCTOVANI[z.uctovani] : "hodinově",
-      z.akce, z.misto, z.zakaznik, z.zarizeni, z.predmet, z.servisni_ukony, z.material, z.nahradni_dily,
-      cisloCsv(z.prace_hod), cisloCsv(z.cesta_tam_hod), cisloCsv(z.cesta_zpet_hod), cisloCsv(z.cesta_km),
+      z.akce, z.misto, z.zakaznik, z.technici.join(", "), z.technici.length || "", z.zarizeni,
+      z.predmet, z.servisni_ukony, z.material, z.nahradni_dily,
+      cisloCsv(z.prace_hod), z.prace_hod != null ? cisloCsv(Number(z.prace_hod) * Math.max(1, z.technici.length)) : "",
+      cisloCsv(z.cesta_tam_hod), cisloCsv(z.cesta_zpet_hod), cisloCsv(z.cesta_km),
       z.ke_kontrole ? "ano" : "",
     ]);
   }
   const s = souhrnVyberu(rows);
   radky.push([]);
-  radky.push(["Celkem", "", pocetZaznamu(rows.length), "", "", "", "", "", "", "", "", "",
-    cisloCsv(s.prace), "", s.cesta ? cisloCsv(s.cesta) : "", cisloCsv(s.km), ""]);
+  radky.push(["Celkem", "", pocetZaznamu(rows.length), "", "", "", "", "", "", "", "", "", "", "",
+    cisloCsv(s.prace), cisloCsv(s.clovekohodiny), "", s.cesta ? cisloCsv(s.cesta) : "", cisloCsv(s.km), ""]);
   radky.push(["Výběr", popisFiltru()]);
   return "\uFEFF" + radky.map((r) => r.map(bunkaCsv).join(";")).join("\r\n");
 }
 
 function vytvorText(rows) {
   const s = souhrnVyberu(rows);
-  const out = [`${popisFiltru()}`, [pocetZaznamu(rows.length), `práce ${fmtCislo(s.prace)} h`, s.cesta ? `cesta ${fmtCislo(s.cesta)} h` : "", s.km ? `${fmtCislo(s.km)} km` : ""].filter(Boolean).join(" · "), ""];
+  const out = [`${popisFiltru()}`, [pocetZaznamu(rows.length), `práce ${fmtCislo(s.prace)} h`, s.clovekohodiny !== s.prace ? `${fmtCislo(s.clovekohodiny)} člověkohodin` : "", s.cesta ? `cesta ${fmtCislo(s.cesta)} h` : "", s.km ? `${fmtCislo(s.km)} km` : ""].filter(Boolean).join(" · "), ""];
   for (const z of rows) {
     const [y, m, d] = (z.datum_zasahu || "").split("-").map(Number);
     const hlava = z.typ === "montaz"
@@ -1058,6 +1140,7 @@ function vytvorText(rows) {
       : [z.zakaznik, z.misto].filter(Boolean).join(", ") || "Servis";
     out.push(`${d}. ${m}. ${y} – ${hlava}${z.uctovani ? ` (${MALE_UCTOVANI[z.uctovani]})` : ""}`);
     if (z.typ === "montaz" && (z.misto || z.zakaznik)) out.push(`  ${[z.zakaznik, z.misto].filter(Boolean).join(", ")}`);
+    if (z.technici.length) out.push(`  Technici: ${z.technici.join(", ")}`);
     if (z.zarizeni) out.push(`  Zařízení: ${z.zarizeni}`);
     if (z.predmet) out.push(`  ${z.typ === "montaz" ? "Práce" : "Předmět"}: ${z.predmet}`);
     if (z.servisni_ukony) out.push(`  Servisní úkony: ${z.servisni_ukony}`);
@@ -1310,6 +1393,9 @@ function otevri(z) {
   $("#btn-smazat").textContent = skupina.length > 1 ? `Smazat všech ${skupina.length} dní` : "Smazat záznam";
   vykresliFotky().catch((e) => log("fotky", e));
   vykresliRychleUkony();
+  if (novy) aktualni.technici = vychoziTechnici();
+  else aktualni.technici = [...(aktualni.technici || [])];
+  vykresliVyberTechniku();
 
   $("#sheet-obsah").scrollTop = 0;
   $("#sheet").classList.add("otevreno");
@@ -1348,6 +1434,7 @@ function ctiFormular() {
   d.cesta_zpet_hod = ctiHodiny($("#f-zpet").value, "Cesta zpět");
   if (d.typ !== "montaz") d.akce = null;
   d.uctovani = aktualni.uctovani || null;
+  d.technici = [...(aktualni.technici || [])];
   d.ke_kontrole = $("#f-kontrola").checked;
   return d;
 }
@@ -1458,6 +1545,173 @@ $("#btn-smazat").addEventListener("click", akce(async () => {
   zavri();
   toast("Smazáno");
 }));
+
+// ---------- technici ----------
+function prijmeni(jmeno) { return String(jmeno).trim().split(/\s+/).slice(-1)[0]; }
+const aktivniTechnici = () => technici.filter((t) => t.aktivni);
+
+async function nactiTechniky() {
+  const { data, error } = await sb.from("technici").select("id,jmeno,ja,aktivni").order("jmeno");
+  if (error) {
+    log("technici nenačteni", error);
+    technici = [];
+    if (!window.__varovaniTechnici) {
+      window.__varovaniTechnici = true;
+      toast("Seznam techniků nejde načíst – spusť migraci migrace-technici.sql", true);
+    }
+  } else {
+    technici = data;
+  }
+  vykresliFiltrTechniku();
+}
+
+// výchozí technici nového záznamu: parta z naposledy vytvořeného záznamu, jinak „já“
+function vychoziTechnici() {
+  const posledni = [...zaznamy].sort((a, b) => (b.vytvoreno || "").localeCompare(a.vytvoreno || ""))
+    .find((z) => z.technici?.length);
+  const platne = new Set(aktivniTechnici().map((t) => t.jmeno));
+  const z = (posledni?.technici || []).filter((j) => platne.has(j));
+  if (z.length) return z;
+  const ja = technici.find((t) => t.ja && t.aktivni);
+  return ja ? [ja.jmeno] : [];
+}
+
+function vykresliVyberTechniku() {
+  const zvolene = new Set(aktualni?.technici || []);
+  const jmena = [...new Set([...aktivniTechnici().map((t) => t.jmeno), ...zvolene])];
+  $("#f-technici").innerHTML = jmena.length
+    ? jmena.map((j) => `<button type="button" class="${zvolene.has(j) ? "on" : ""}" data-jmeno="${esc(j)}">${zvolene.has(j) ? "✓ " : ""}${esc(j)}</button>`).join("")
+    : `<span class="prazdne">Zatím žádní technici – <a href="#" id="odkaz-nastaveni">přidej je v Nastavení</a>.</span>`;
+}
+$("#f-technici").addEventListener("click", (e) => {
+  if (e.target.id === "odkaz-nastaveni") { e.preventDefault(); otevriNastaveni(); return; }
+  const b = e.target.closest("button");
+  if (!b || !aktualni) return;
+  const j = b.dataset.jmeno;
+  const t = new Set(aktualni.technici || []);
+  t.has(j) ? t.delete(j) : t.add(j);
+  // pořadí podle seznamu techniků
+  const poradi = technici.map((x) => x.jmeno);
+  aktualni.technici = [...t].sort((a, b) => (poradi.indexOf(a) + 1 || 999) - (poradi.indexOf(b) + 1 || 999));
+  vykresliVyberTechniku();
+});
+
+function vykresliFiltrTechniku() {
+  const jmena = [...new Set([...aktivniTechnici().map((t) => t.jmeno), ...zaznamy.flatMap((z) => z.technici || [])])]
+    .sort((a, b) => a.localeCompare(b, "cs"));
+  const sel = $("#f-technik");
+  if (stav.technik && !jmena.includes(stav.technik)) stav.technik = "";
+  sel.innerHTML = `<option value="">Všichni technici</option>` +
+    jmena.map((j) => `<option value="${esc(j)}"${j === stav.technik ? " selected" : ""}>${esc(j)}</option>`).join("");
+  $("#f-technik-pil").classList.toggle("on", !!stav.technik);
+  $("#f-technik-pil").classList.toggle("skryto", !jmena.length);
+}
+$("#f-technik").addEventListener("change", (e) => {
+  stav.technik = e.target.value;
+  $("#f-technik-pil").classList.toggle("on", !!stav.technik);
+  vykresli();
+});
+
+// --- nastavení: správa techniků ---
+function otevriNastaveni() {
+  vykresliNastaveni();
+  $("#verze-nastaveni").textContent = document.querySelector("#prihlaseni .verze")?.textContent || "";
+  $("#nastaveni").classList.add("otevreno");
+  $("#nastaveni").setAttribute("aria-hidden", "false");
+  document.body.classList.add("zamceno");
+}
+function zavriNastaveni() {
+  $("#nastaveni").classList.remove("otevreno");
+  $("#nastaveni").setAttribute("aria-hidden", "true");
+  if (!$("#sheet").classList.contains("otevreno")) document.body.classList.remove("zamceno");
+  if (aktualni) vykresliVyberTechniku();
+}
+$("#btn-nastaveni").addEventListener("click", otevriNastaveni);
+$("#btn-nastaveni-zavrit").addEventListener("click", zavriNastaveni);
+
+function vykresliNastaveni() {
+  const aktivni = aktivniTechnici();
+  const odebrani = technici.filter((t) => !t.aktivni);
+  $("#seznam-techniku").innerHTML = aktivni.map((t) => `
+    <div class="technik-radek" data-id="${esc(t.id)}">
+      <button class="hvezda${t.ja ? " on" : ""}" data-akce="ja" aria-label="To jsem já">${t.ja ? "★" : "☆"}</button>
+      <button class="jmeno" data-akce="prejmenovat">${esc(t.jmeno)}</button>
+      <button class="odebrat" data-akce="odebrat">Odebrat</button>
+    </div>`).join("");
+  $("#sekce-odebrani").classList.toggle("skryto", !odebrani.length);
+  $("#seznam-odebranych").innerHTML = odebrani.map((t) => `
+    <div class="technik-radek" data-id="${esc(t.id)}">
+      <span class="jmeno" style="color:var(--label2)">${esc(t.jmeno)}</span>
+      <button class="vratit" data-akce="vratit">Vrátit</button>
+    </div>`).join("");
+}
+
+async function poZmeneTechniku() {
+  await nactiTechniky();
+  vykresliNastaveni();
+  vykresli();
+}
+
+$("#form-technik").addEventListener("submit", akce(async (e) => {
+  e.preventDefault();
+  const jmeno = $("#novy-technik").value.trim().replace(/\s+/g, " ");
+  if (!jmeno) return;
+  if (jmeno.split(" ").length < 2) {
+    if (!confirm(`„${jmeno}“ nevypadá jako jméno a příjmení. Přesto přidat?`)) return;
+  }
+  const existuje = technici.find((t) => norm(t.jmeno) === norm(jmeno));
+  if (existuje) {
+    if (!existuje.aktivni) {
+      const { error } = await sb.from("technici").update({ aktivni: true }).eq("id", existuje.id);
+      if (error) throw error;
+    } else { toast("Tento technik už v seznamu je", true); return; }
+  } else {
+    const prvni = !technici.length;
+    const { error } = await sb.from("technici").insert({ jmeno, ja: prvni });
+    if (error) throw error;
+  }
+  $("#novy-technik").value = "";
+  await poZmeneTechniku();
+  toast("Technik přidán");
+}));
+
+async function akceTechnika(e) {
+  const b = e.target.closest("button[data-akce]");
+  if (!b) return;
+  const t = technici.find((x) => x.id === b.closest(".technik-radek").dataset.id);
+  if (!t) return;
+  const a = b.dataset.akce;
+  if (a === "ja") {
+    let r = await sb.from("technici").update({ ja: false }).eq("ja", true);
+    if (r.error) throw r.error;
+    if (!t.ja) { r = await sb.from("technici").update({ ja: true }).eq("id", t.id); if (r.error) throw r.error; }
+  } else if (a === "prejmenovat") {
+    const nove = (prompt("Jméno a příjmení:", t.jmeno) || "").trim().replace(/\s+/g, " ");
+    if (!nove || nove === t.jmeno) return;
+    if (technici.some((x) => x.id !== t.id && norm(x.jmeno) === norm(nove))) { toast("Takový technik už existuje", true); return; }
+    const stare = t.jmeno;
+    let r = await sb.from("technici").update({ jmeno: nove }).eq("id", t.id);
+    if (r.error) throw r.error;
+    r = await sb.rpc("prejmenuj_technika", { stare, nove });
+    if (r.error) throw r.error;
+    log("přejmenováno v záznamech:", r.data);
+    if (stav.technik === stare) stav.technik = nove;
+    await nacti();
+    vykresliNastaveni();
+    toast(r.data ? `Přejmenováno i v ${r.data} záznamech` : "Přejmenováno");
+    return;
+  } else if (a === "odebrat") {
+    if (!confirm(`Odebrat ${t.jmeno} ze seznamu? Ve starých záznamech zůstane.`)) return;
+    const r = await sb.from("technici").update({ aktivni: false, ja: false }).eq("id", t.id);
+    if (r.error) throw r.error;
+  } else if (a === "vratit") {
+    const r = await sb.from("technici").update({ aktivni: true }).eq("id", t.id);
+    if (r.error) throw r.error;
+  }
+  await poZmeneTechniku();
+}
+$("#seznam-techniku").addEventListener("click", akce(akceTechnika));
+$("#seznam-odebranych").addEventListener("click", akce(akceTechnika));
 
 // ---------- rychlé servisní úkony ----------
 const ZAKLADNI_UKONY = ["Pájení", "Vakuování", "Tlaková zkouška dusíkem", "PC diagnostika",
