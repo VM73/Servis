@@ -432,7 +432,7 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
     <button class="velke-tlacitko" id="btn-prihlasit" type="submit">Přihlásit</button>
     <div class="chyba" id="p-chyba"></div>
   </form>
-  <div class="verze">verze 15 · oprava přihlášení na PC</div>
+  <div class="verze">verze 16 · trvalé přihlášení na PC</div>
 </section>
 
 <!-- ============ SEZNAM ============ -->
@@ -692,17 +692,32 @@ const LADENI = new URLSearchParams(location.search).has("debug");
 // Některá rozšíření prohlížeče mažou klíče "sb-…-auth-token"; tohle přihlášení udrží.
 const KLIC_RELACE = "servis-prihlaseni";
 const relaceVPameti = new Map();
+// Relace se ukládá zakódovaná (base64 pozpátku) – antitracking rozšíření (např. Avast AntiTrack)
+// mažou zápisy, ve kterých poznají přihlašovací token.
+const PREFIX_KODU = "s1:";
+function zakoduj(v) {
+  const b = btoa(String.fromCharCode(...new TextEncoder().encode(v)));
+  return PREFIX_KODU + b.split("").reverse().join("");
+}
+function dekoduj(v) {
+  if (v == null || !v.startsWith(PREFIX_KODU)) return v;   // starší nezakódovaná hodnota
+  try {
+    const b = v.slice(PREFIX_KODU.length).split("").reverse().join("");
+    return new TextDecoder().decode(Uint8Array.from(atob(b), (c) => c.charCodeAt(0)));
+  } catch { return null; }
+}
 const ulozisteRelace = {
   getItem(k) {
     // v rámci otevřené stránky má přednost nejnovější kopie v paměti, po načtení stránky úložiště prohlížeče
     if (relaceVPameti.has(k)) return relaceVPameti.get(k);
-    try { const v = localStorage.getItem(k); if (v != null) relaceVPameti.set(k, v); return v; } catch { return null; }
+    try { const v = dekoduj(localStorage.getItem(k)); if (v != null) relaceVPameti.set(k, v); return v; } catch { return null; }
   },
   setItem(k, v) {
     relaceVPameti.set(k, v);
     try {
-      localStorage.setItem(k, v);
-      if (localStorage.getItem(k) !== v) console.warn("[servis] prohlížeč uložení relace zablokoval – držím ji jen v paměti");
+      const z = zakoduj(v);
+      localStorage.setItem(k, z);
+      if (localStorage.getItem(k) !== z) console.warn("[servis] prohlížeč uložení relace zablokoval – držím ji jen v paměti");
     } catch (e) { console.warn("[servis] uložení relace selhalo:", e.message); }
   },
   removeItem(k) {
