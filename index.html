@@ -432,7 +432,7 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
     <button class="velke-tlacitko" id="btn-prihlasit" type="submit">Přihlásit</button>
     <div class="chyba" id="p-chyba"></div>
   </form>
-  <div class="verze">verze 16 · trvalé přihlášení na PC</div>
+  <div class="verze">verze 17 · trvalé přihlášení na PC</div>
 </section>
 
 <!-- ============ SEZNAM ============ -->
@@ -706,6 +706,15 @@ function dekoduj(v) {
     return new TextDecoder().decode(Uint8Array.from(atob(b), (c) => c.charCodeAt(0)));
   } catch { return null; }
 }
+function ulozDoProhlizece(k) {
+  const v = relaceVPameti.get(k);
+  if (v == null) return;
+  try {
+    const z = zakoduj(v);
+    localStorage.setItem(k, z);
+    if (localStorage.getItem(k) !== z) console.warn("[servis] prohlížeč uložení relace zablokoval – držím ji jen v paměti");
+  } catch (e) { console.warn("[servis] uložení relace selhalo:", e.message); }
+}
 const ulozisteRelace = {
   getItem(k) {
     // v rámci otevřené stránky má přednost nejnovější kopie v paměti, po načtení stránky úložiště prohlížeče
@@ -714,15 +723,14 @@ const ulozisteRelace = {
   },
   setItem(k, v) {
     relaceVPameti.set(k, v);
-    try {
-      const z = zakoduj(v);
-      localStorage.setItem(k, z);
-      if (localStorage.getItem(k) !== z) console.warn("[servis] prohlížeč uložení relace zablokoval – držím ji jen v paměti");
-    } catch (e) { console.warn("[servis] uložení relace selhalo:", e.message); }
+    // Zápis do prohlížeče až mimo volání knihovny (načtené z cdn.jsdelivr.net):
+    // antitracking (Avast AntiTrack) blokuje ukládání prováděné skripty z cizích domén.
+    setTimeout(() => ulozDoProhlizece(k), 0);
   },
   removeItem(k) {
     relaceVPameti.delete(k);
     try { localStorage.removeItem(k); } catch {}
+    setTimeout(() => { try { if (!relaceVPameti.has(k)) localStorage.removeItem(k); } catch {} }, 0);
   },
 };
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY.trim(), {
