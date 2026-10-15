@@ -366,6 +366,8 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
 .stitek.servis { background: var(--orange); }
 .souhrn div { padding: 10px 10px; }
 .souhrn b { font-size: 18px; }
+.souhrn .pod { display: block; font-size: 12px; color: var(--label2); margin-top: 1px; font-variant-numeric: tabular-nums; }
+.souhrn .pod:empty { display: none; }
 .sheet.vice .jen-jeden, .sheet:not(.vice) .jen-vice { display: none !important; }
 .sheet.vice.montaz #h-cas, .sheet.vice.montaz #skupina-cas, .sheet.vice.montaz #skupina-cas + .form-pozn { display: none; }
 .den-radek { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; position: relative; }
@@ -430,7 +432,7 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
     <button class="velke-tlacitko" id="btn-prihlasit" type="submit">Přihlásit</button>
     <div class="chyba" id="p-chyba"></div>
   </form>
-  <div class="verze">verze 12 · technici</div>
+  <div class="verze">verze 13 · člověkohodiny</div>
 </section>
 
 <!-- ============ SEZNAM ============ -->
@@ -501,7 +503,7 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
 
     <div class="souhrn">
       <div><small>Záznamů</small><b id="s-pocet">0</b></div>
-      <div><small>Práce</small><b id="s-prace">0 h</b></div>
+      <div><small>Práce</small><b id="s-prace">0 h</b><span class="pod" id="s-prace-pod"></span></div>
       <div><small>Cesta</small><b id="s-cesta">0 h</b></div>
       <div><small>Km</small><b id="s-km">0</b></div>
     </div>
@@ -570,6 +572,7 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
     <div class="sekce-hlavicka jen-hodinove" id="h-cas">Čas</div>
     <div class="form-skupina jen-hodinove" id="skupina-cas">
       <div class="pole jen-jeden jen-hodinove"><label for="f-prace">Práce</label><input id="f-prace" inputmode="decimal" placeholder="0" autocomplete="off"><span class="jednotka">h</span></div>
+      <div class="pole jen-jeden jen-hodinove skryto" id="radek-clh"><label>Za partu</label><span class="hodnota" id="f-clh">–</span></div>
       <div class="pole jen-servis"><label for="f-tam">Cesta tam</label><input id="f-tam" inputmode="decimal" placeholder="0" autocomplete="off"><span class="jednotka">h</span></div>
       <div class="pole jen-servis"><label for="f-zpet">Cesta zpět</label><input id="f-zpet" inputmode="decimal" placeholder="0" autocomplete="off"><span class="jednotka">h</span></div>
       <div class="pole jen-servis jen-jeden"><label>Celkem</label><span class="hodnota" id="f-celkem">–</span></div>
@@ -889,14 +892,23 @@ function filtruj() {
 function vykresli() {
   const vysledek = filtruj();
 
-  let prace = 0, cesta = 0, km = 0;
+  let prace = 0, cesta = 0, km = 0, clh = 0;
   for (const z of vysledek) {
     prace += Number(z.prace_hod) || 0;
+    clh += (Number(z.prace_hod) || 0) * Math.max(1, (z.technici || []).length);
     cesta += (Number(z.cesta_tam_hod) || 0) + (Number(z.cesta_zpet_hod) || 0);
     km += Number(z.cesta_km) || 0;
   }
   $("#s-pocet").textContent = vysledek.length;
-  $("#s-prace").textContent = fmtCislo(prace) + " h";
+  // hlavní číslo = člověkohodiny (hodiny × technici); pod ním čas party, pokud se liší
+  // při filtru na jednoho technika jsou to jeho vlastní hodiny
+  if (stav.technik) {
+    $("#s-prace").textContent = fmtCislo(prace) + " h";
+    $("#s-prace-pod").textContent = prijmeni(stav.technik);
+  } else {
+    $("#s-prace").textContent = fmtCislo(clh) + " h";
+    $("#s-prace-pod").textContent = Math.abs(clh - prace) > 0.001 ? `parta ${fmtCislo(prace)} h` : "";
+  }
   $("#s-cesta").textContent = fmtCislo(cesta) + " h";
   $("#s-km").textContent = Math.round(km).toLocaleString("cs-CZ");
 
@@ -937,7 +949,8 @@ function vykresli() {
       const znacky = [];
       if (z.ke_kontrole) znacky.push(`<span class="varovani">${IKONY.pozor}Ke kontrole</span>`);
       if (z.skupina && poradi.has(z.id)) znacky.push(`<span>${IKONY.kalendar}den ${poradi.get(z.id)}</span>`);
-      if (z.prace_hod != null) znacky.push(`<span>${IKONY.prace}${fmtH(Number(z.prace_hod))}</span>`);
+      if (z.prace_hod != null) znacky.push(`<span>${IKONY.prace}${fmtH(Number(z.prace_hod))}${z.technici.length > 1
+        ? ` × ${z.technici.length} = ${fmtH(Number(z.prace_hod) * z.technici.length)}` : ""}</span>`);
       if (cestaZ) znacky.push(`<span>${IKONY.auto}${fmtH(cestaZ)}</span>`);
       if (z.technici.length) znacky.push(`<span>${IKONY.osoba}${esc(z.technici.map(prijmeni).join(", "))}</span>`);
       if (z.uctovani) znacky.push(`<span class="uct">${IKONY.dokument}${NAZVY_UCTOVANI[z.uctovani]}</span>`);
@@ -1272,7 +1285,9 @@ function prepoctiDny() {
   }
   const pocet = document.querySelectorAll("#f-dny .den-radek").length;
   $("#f-dny-celkem").textContent = chyba ? "neplatná hodnota"
-    : [`${pocet} ${pocet >= 2 && pocet <= 4 ? "dny" : "dní"}`, aktualni?.uctovani ? "" : `${fmtCislo(h)} h`, aktualni?.uctovani ? "" : `${fmtCislo(km)} km`].filter(Boolean).join(" · ");
+    : [`${pocet} ${pocet >= 2 && pocet <= 4 ? "dny" : "dní"}`, aktualni?.uctovani ? "" : `${fmtCislo(h)} h`,
+         aktualni?.uctovani || pocetTechniku() < 2 ? "" : `${fmtCislo(h * pocetTechniku())} h za partu`,
+         aktualni?.uctovani ? "" : `${fmtCislo(km)} km`].filter(Boolean).join(" · ");
 }
 
 $("#f-dny").addEventListener("input", (e) => {
@@ -1396,6 +1411,7 @@ function otevri(z) {
   if (novy) aktualni.technici = vychoziTechnici();
   else aktualni.technici = [...(aktualni.technici || [])];
   vykresliVyberTechniku();
+  prepoctiClh();
 
   $("#sheet-obsah").scrollTop = 0;
   $("#sheet").classList.add("otevreno");
@@ -1413,6 +1429,19 @@ function zavri() {
   if (zmeneno) nacti().catch(chybaNacteni);
   aktualni = null;
 }
+
+// člověkohodiny = hodiny × počet techniků
+function pocetTechniku() { return Math.max(1, (aktualni?.technici || []).length); }
+function prepoctiClh() {
+  const n = pocetTechniku();
+  let p = 0;
+  try { p = ctiHodiny($("#f-prace").value, "Práce") || 0; } catch { p = NaN; }
+  $("#radek-clh").classList.toggle("skryto", n < 2);
+  $("#f-clh").textContent = Number.isNaN(p) ? "neplatná hodnota"
+    : p ? `${fmtCislo(p)} h × ${n} technici = ${fmtCislo(p * n)} h` : `× ${n} technici`;
+  if (jeVicedni()) prepoctiDny();
+}
+$("#f-prace").addEventListener("input", prepoctiClh);
 
 function prepoctiCelkem() {
   try {
@@ -1594,6 +1623,7 @@ $("#f-technici").addEventListener("click", (e) => {
   const poradi = technici.map((x) => x.jmeno);
   aktualni.technici = [...t].sort((a, b) => (poradi.indexOf(a) + 1 || 999) - (poradi.indexOf(b) + 1 || 999));
   vykresliVyberTechniku();
+  prepoctiClh();
 });
 
 function vykresliFiltrTechniku() {
