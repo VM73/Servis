@@ -432,7 +432,7 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
     <button class="velke-tlacitko" id="btn-prihlasit" type="submit">Přihlásit</button>
     <div class="chyba" id="p-chyba"></div>
   </form>
-  <div class="verze">verze 13 · člověkohodiny</div>
+  <div class="verze">verze 14 · diagnostika přihlášení</div>
 </section>
 
 <!-- ============ SEZNAM ============ -->
@@ -642,6 +642,7 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
         <button class="tlacitko-bunka cervene" id="btn-odhlasit">Odhlásit</button>
       </div>
     </div>
+    <div class="form-pozn" id="prihlasen-jako" style="text-align:center;margin-top:14px"></div>
     <div class="verze" id="verze-nastaveni"></div>
   </div>
 </section>
@@ -685,7 +686,15 @@ if (typeof supabase === "undefined") {
 const SUPABASE_KEY = "sb_publishable_6SgwttYu1LHUrAeInwv1Qw_chrfScN7 ";
 // =============================================================
 
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY.trim());
+// ?debug=1 v adrese zapne podrobný výpis přihlašování do konzole
+const LADENI = new URLSearchParams(location.search).has("debug");
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY.trim(), {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, debug: LADENI },
+});
+function stavUlozeni() {
+  try { return Object.keys(localStorage).filter((k) => k.startsWith("sb-")).join(", ") || "(žádné přihlášení v úložišti)"; }
+  catch (e) { return "úložiště nedostupné: " + e.message; }
+}
 console.log("[servis] start, klíč:", SUPABASE_KEY.slice(0, 16) + "…");
 const $ = (s) => document.querySelector(s);
 
@@ -808,10 +817,19 @@ $("#form-prihlaseni").addEventListener("submit", akce(async (e) => {
   btn.disabled = true;
   $("#p-chyba").textContent = "";
   try {
-    const { error } = await sb.auth.signInWithPassword({
+    const { data, error } = await sb.auth.signInWithPassword({
       email: $("#p-email").value.trim(),
       password: $("#p-heslo").value,
     });
+    log("přihlášení – výsledek", {
+      relace: !!data?.session, email: data?.user?.email, id: data?.user?.id,
+      vyprsi: data?.session?.expires_at ? new Date(data.session.expires_at * 1000).toLocaleString("cs-CZ") : null,
+      hodinyPC: new Date().toLocaleString("cs-CZ"), ulozeni: stavUlozeni(), chyba: error?.message,
+    });
+    setTimeout(async () => {
+      const s = (await sb.auth.getSession()).data.session;
+      log("přihlášení – kontrola po 2 s", { relace: !!s, email: s?.user?.email, ulozeni: stavUlozeni() });
+    }, 2000);
     if (error) {
       log("přihlášení selhalo", error);
       $("#p-chyba").textContent = error.message === "Invalid login credentials"
@@ -828,7 +846,7 @@ $("#btn-odhlasit").addEventListener("click", akce(async () => {
 }));
 
 sb.auth.onAuthStateChange((udalost, session) => {
-  log("auth", udalost);
+  log("auth", udalost, { relace: !!session, email: session?.user?.email ?? null, ulozeni: stavUlozeni() });
   const novy = session?.user ?? null;
   const zmena = novy?.id !== uzivatel?.id;
   uzivatel = novy;
@@ -1646,6 +1664,7 @@ $("#f-technik").addEventListener("change", (e) => {
 function otevriNastaveni() {
   vykresliNastaveni();
   $("#verze-nastaveni").textContent = document.querySelector("#prihlaseni .verze")?.textContent || "";
+  $("#prihlasen-jako").textContent = uzivatel ? `Přihlášen jako ${uzivatel.email}` : "";
   $("#nastaveni").classList.add("otevreno");
   $("#nastaveni").setAttribute("aria-hidden", "false");
   document.body.classList.add("zamceno");
