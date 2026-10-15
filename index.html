@@ -432,7 +432,7 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
     <button class="velke-tlacitko" id="btn-prihlasit" type="submit">Přihlásit</button>
     <div class="chyba" id="p-chyba"></div>
   </form>
-  <div class="verze">verze 14 · diagnostika přihlášení</div>
+  <div class="verze">verze 15 · oprava přihlášení na PC</div>
 </section>
 
 <!-- ============ SEZNAM ============ -->
@@ -688,12 +688,39 @@ const SUPABASE_KEY = "sb_publishable_6SgwttYu1LHUrAeInwv1Qw_chrfScN7 ";
 
 // ?debug=1 v adrese zapne podrobný výpis přihlašování do konzole
 const LADENI = new URLSearchParams(location.search).has("debug");
+// Vlastní úložiště relace: vlastní název klíče + záložní kopie v paměti.
+// Některá rozšíření prohlížeče mažou klíče "sb-…-auth-token"; tohle přihlášení udrží.
+const KLIC_RELACE = "servis-prihlaseni";
+const relaceVPameti = new Map();
+const ulozisteRelace = {
+  getItem(k) {
+    // v rámci otevřené stránky má přednost nejnovější kopie v paměti, po načtení stránky úložiště prohlížeče
+    if (relaceVPameti.has(k)) return relaceVPameti.get(k);
+    try { const v = localStorage.getItem(k); if (v != null) relaceVPameti.set(k, v); return v; } catch { return null; }
+  },
+  setItem(k, v) {
+    relaceVPameti.set(k, v);
+    try {
+      localStorage.setItem(k, v);
+      if (localStorage.getItem(k) !== v) console.warn("[servis] prohlížeč uložení relace zablokoval – držím ji jen v paměti");
+    } catch (e) { console.warn("[servis] uložení relace selhalo:", e.message); }
+  },
+  removeItem(k) {
+    relaceVPameti.delete(k);
+    try { localStorage.removeItem(k); } catch {}
+  },
+};
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY.trim(), {
-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, debug: LADENI },
+  auth: {
+    persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, debug: LADENI,
+    storageKey: KLIC_RELACE, storage: ulozisteRelace,
+  },
 });
 function stavUlozeni() {
-  try { return Object.keys(localStorage).filter((k) => k.startsWith("sb-")).join(", ") || "(žádné přihlášení v úložišti)"; }
-  catch (e) { return "úložiště nedostupné: " + e.message; }
+  try {
+    const v = localStorage.getItem(KLIC_RELACE);
+    return v ? "uloženo v prohlížeči" : relaceVPameti.has(KLIC_RELACE) ? "jen v paměti (prohlížeč ukládání blokuje)" : "(žádné přihlášení)";
+  } catch (e) { return "úložiště nedostupné: " + e.message; }
 }
 console.log("[servis] start, klíč:", SUPABASE_KEY.slice(0, 16) + "…");
 const $ = (s) => document.querySelector(s);
