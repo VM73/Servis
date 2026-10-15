@@ -1,7 +1,7 @@
 // Servisní záznamy – service worker
 // Aplikace se načte i bez signálu (data ale potřebují připojení).
 // Při změně souborů zvyš číslo verze.
-const CACHE = "servis-v18";
+const CACHE = "servis-v19";
 const SOUBORY = ["./", "index.html", "manifest.webmanifest", "icon-180.png", "icon-512.png"];
 const KNIHOVNA = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
 

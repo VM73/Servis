@@ -370,7 +370,15 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
 .souhrn .pod:empty { display: none; }
 .sheet.vice .jen-jeden, .sheet:not(.vice) .jen-vice { display: none !important; }
 .sheet.vice.montaz #h-cas, .sheet.vice.montaz #skupina-cas, .sheet.vice.montaz #skupina-cas + .form-pozn { display: none; }
-.den-radek { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; position: relative; }
+.den-technici { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 16px 10px; margin-top: -4px; }
+.den-technici button {
+  font-size: 13px; padding: 3px 9px; border-radius: 12px; background: var(--fill); color: var(--label2);
+}
+.den-technici button.on { background: var(--blue); color: #fff; }
+.den-technici:empty { display: none; }
+.den-technici + .den-radek::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: .5px solid var(--sep); }
+.technici-vyber button.castecne { background: rgba(0,122,255,.18); color: var(--blue); }
+.den-radek {display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; position: relative; }
 .den-radek + .den-radek::before, .den-celkem::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: .5px solid var(--sep); }
 .den-radek .den-nazev { flex: 1; min-width: 0; white-space: nowrap; }
 .den-radek .den-nazev small { color: var(--label2); font-size: 15px; margin-left: 4px; }
@@ -450,7 +458,7 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
     <button class="velke-tlacitko" id="btn-prihlasit" type="submit">Přihlásit</button>
     <div class="chyba" id="p-chyba"></div>
   </form>
-  <div class="verze">verze 18 · diktování u polí</div>
+  <div class="verze">verze 19 · technici po dnech</div>
 </section>
 
 <!-- ============ SEZNAM ============ -->
@@ -567,6 +575,7 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
     <div class="form-skupina">
       <div class="technici-vyber" id="f-technici"></div>
     </div>
+    <div class="form-pozn skryto" id="technici-pozn">Klepnutím přidáš / odebereš technika všem dnům. Pro jednotlivé dny ho vyber níž v sekci Dny. ◐ = jen některé dny.</div>
 
     <div class="sekce-hlavicka" id="h-prace">Servis / oprava</div>
     <div class="form-skupina">
@@ -1351,28 +1360,69 @@ function vykresliDny() {
   const datumy = datumyRozsah($("#f-datum").value, $("#f-datum-do").value);
   $("#f-dny").innerHTML = datumy.map((d) => {
     const h = hodnotyDnu.get(d) || {};
+    if (!Array.isArray(h.technici)) { h.technici = [...(aktualni?.technici || [])]; hodnotyDnu.set(d, h); }
     return `<div class="den-radek" data-datum="${d}">
       <span class="den-nazev">${nazevDne(d)}</span>
       <input class="hod jen-hodinove" inputmode="decimal" placeholder="0" value="${esc(h.prace ?? "")}" aria-label="Hodiny"><span class="jednotka jen-hodinove">h</span>
       <input class="km jen-hodinove" inputmode="decimal" placeholder="0" value="${esc(h.km ?? "")}" aria-label="Kilometry"><span class="jednotka jen-hodinove">km</span>
-    </div>`;
+    </div>
+    <div class="den-technici" data-datum="${d}">${technikyDneHtml(d)}</div>`;
   }).join("");
   if (datumy.length >= 31) toast("Rozsah je omezený na 31 dní", true);
+  if (aktualni) { aktualizujSpolecneTechniky(); vykresliVyberTechniku(); }
   prepoctiDny();
 }
 
+// technici jednoho dne (štítky s příjmením pod řádkem dne)
+function jmenaKNabidce() {
+  const zDnu = [...hodnotyDnu.values()].flatMap((h) => h.technici || []);
+  return [...new Set([...aktivniTechnici().map((t) => t.jmeno), ...(aktualni?.technici || []), ...zDnu])];
+}
+function technikyDneHtml(d) {
+  const zvolene = new Set(hodnotyDnu.get(d)?.technici || []);
+  const jmena = jmenaKNabidce();
+  if (!jmena.length) return "";
+  return jmena.map((j) => `<button type="button" class="${zvolene.has(j) ? "on" : ""}" data-jmeno="${esc(j)}" title="${esc(j)}">${esc(prijmeni(j))}</button>`).join("");
+}
+function datumyFormulare() { return [...document.querySelectorAll("#f-dny .den-radek")].map((r) => r.dataset.datum); }
+function serad(jmena) {
+  const poradi = technici.map((x) => x.jmeno);
+  return [...jmena].sort((a, b) => (poradi.indexOf(a) + 1 || 999) - (poradi.indexOf(b) + 1 || 999));
+}
+// společný výběr = sjednocení techniků všech dnů
+function aktualizujSpolecneTechniky() {
+  if (!aktualni) return;
+  aktualni.technici = serad(new Set(datumyFormulare().flatMap((d) => hodnotyDnu.get(d)?.technici || [])));
+}
+$("#f-dny").addEventListener("click", (e) => {
+  const b = e.target.closest(".den-technici button");
+  if (!b) return;
+  const d = b.closest(".den-technici").dataset.datum;
+  const h = hodnotyDnu.get(d) || {};
+  const t = new Set(h.technici || []);
+  t.has(b.dataset.jmeno) ? t.delete(b.dataset.jmeno) : t.add(b.dataset.jmeno);
+  h.technici = serad(t);
+  hodnotyDnu.set(d, h);
+  b.closest(".den-technici").innerHTML = technikyDneHtml(d);
+  aktualizujSpolecneTechniky();
+  vykresliVyberTechniku();
+  prepoctiDny();
+});
+
 function prepoctiDny() {
-  let h = 0, km = 0, chyba = false;
+  let h = 0, km = 0, clh = 0, chyba = false;
   for (const r of document.querySelectorAll("#f-dny .den-radek")) {
     try {
-      h += ctiHodiny(r.querySelector(".hod").value, "Hodiny") || 0;
+      const hd = ctiHodiny(r.querySelector(".hod").value, "Hodiny") || 0;
+      h += hd;
+      clh += hd * Math.max(1, (hodnotyDnu.get(r.dataset.datum)?.technici || []).length);
       km += ctiKm(r.querySelector(".km").value) || 0;
     } catch { chyba = true; }
   }
   const pocet = document.querySelectorAll("#f-dny .den-radek").length;
   $("#f-dny-celkem").textContent = chyba ? "neplatná hodnota"
     : [`${pocet} ${pocet >= 2 && pocet <= 4 ? "dny" : "dní"}`, aktualni?.uctovani ? "" : `${fmtCislo(h)} h`,
-         aktualni?.uctovani || pocetTechniku() < 2 ? "" : `${fmtCislo(h * pocetTechniku())} h za partu`,
+         aktualni?.uctovani || Math.abs(clh - h) < 0.001 ? "" : `${fmtCislo(clh)} h za partu`,
          aktualni?.uctovani ? "" : `${fmtCislo(km)} km`].filter(Boolean).join(" · ");
 }
 
@@ -1473,6 +1523,7 @@ function otevri(z) {
       hodnotyDnu.set(s.datum_zasahu, {
         prace: s.prace_hod != null ? fmtCislo(Number(s.prace_hod)) : "",
         km: s.cesta_km != null ? fmtCislo(Number(s.cesta_km)) : "",
+        technici: [...(s.technici || [])],
       });
     }
     $("#f-datum-do").value = skupina[skupina.length - 1].datum_zasahu;
@@ -1495,7 +1546,10 @@ function otevri(z) {
   vykresliFotky().catch((e) => log("fotky", e));
   vykresliRychleUkony();
   if (novy) aktualni.technici = vychoziTechnici();
-  else aktualni.technici = [...(aktualni.technici || [])];
+  else aktualni.technici = skupina.length > 1
+    ? serad(new Set(skupina.flatMap((s) => s.technici || [])))
+    : [...(aktualni.technici || [])];
+  if (jeVicedni()) vykresliDny();
   vykresliVyberTechniku();
   prepoctiClh();
 
@@ -1570,6 +1624,7 @@ function ctiDny() {
     datum: r.dataset.datum,
     prace_hod: ctiHodiny(r.querySelector(".hod").value, `Hodiny (${r.dataset.datum})`),
     cesta_km: ctiKm(r.querySelector(".km").value),
+    technici: [...(hodnotyDnu.get(r.dataset.datum)?.technici || aktualni.technici || [])],
   }));
 }
 
@@ -1593,6 +1648,7 @@ async function ulozit({ zavrit = true } = {}) {
       datum_zasahu: den.datum,
       prace_hod: den.prace_hod,
       cesta_km: den.cesta_km,
+      technici: den.technici ?? spolecne.technici,
       // cesta v hodinách, materiál a díly jen u prvního dne – v přehledech se nesčítají vícekrát
       cesta_tam_hod: i === 0 ? spolecne.cesta_tam_hod : null,
       cesta_zpet_hod: i === 0 ? spolecne.cesta_zpet_hod : null,
@@ -1807,8 +1863,16 @@ function vychoziTechnici() {
 function vykresliVyberTechniku() {
   const zvolene = new Set(aktualni?.technici || []);
   const jmena = [...new Set([...aktivniTechnici().map((t) => t.jmeno), ...zvolene])];
+  const vice = jeVicedni();
+  const dny = vice ? datumyFormulare() : [];
+  const stav = (j) => {
+    if (!vice || !dny.length) return zvolene.has(j) ? "on" : "";
+    const n = dny.filter((d) => (hodnotyDnu.get(d)?.technici || []).includes(j)).length;
+    return n === dny.length ? "on" : n ? "castecne" : "";
+  };
+  $("#technici-pozn").classList.toggle("skryto", !vice);
   $("#f-technici").innerHTML = jmena.length
-    ? jmena.map((j) => `<button type="button" class="${zvolene.has(j) ? "on" : ""}" data-jmeno="${esc(j)}">${zvolene.has(j) ? "✓ " : ""}${esc(j)}</button>`).join("")
+    ? jmena.map((j) => { const st = stav(j); return `<button type="button" class="${st}" data-jmeno="${esc(j)}">${st === "on" ? "✓ " : st ? "◐ " : ""}${esc(j)}</button>`; }).join("")
     : `<span class="prazdne">Zatím žádní technici – <a href="#" id="odkaz-nastaveni">přidej je v Nastavení</a>.</span>`;
 }
 $("#f-technici").addEventListener("click", (e) => {
@@ -1816,11 +1880,25 @@ $("#f-technici").addEventListener("click", (e) => {
   const b = e.target.closest("button");
   if (!b || !aktualni) return;
   const j = b.dataset.jmeno;
+  if (jeVicedni()) {
+    // ve vícedenním režimu: přidat všem dnům, nebo (když už je u všech) všem odebrat
+    const dny = datumyFormulare();
+    const uVsech = dny.every((d) => (hodnotyDnu.get(d)?.technici || []).includes(j));
+    for (const d of dny) {
+      const h = hodnotyDnu.get(d) || {};
+      const t = new Set(h.technici || []);
+      uVsech ? t.delete(j) : t.add(j);
+      h.technici = serad(t);
+      hodnotyDnu.set(d, h);
+    }
+    aktualizujSpolecneTechniky();
+    vykresliDny();
+    vykresliVyberTechniku();
+    return;
+  }
   const t = new Set(aktualni.technici || []);
   t.has(j) ? t.delete(j) : t.add(j);
-  // pořadí podle seznamu techniků
-  const poradi = technici.map((x) => x.jmeno);
-  aktualni.technici = [...t].sort((a, b) => (poradi.indexOf(a) + 1 || 999) - (poradi.indexOf(b) + 1 || 999));
+  aktualni.technici = serad(t);
   vykresliVyberTechniku();
   prepoctiClh();
 });
