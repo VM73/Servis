@@ -413,6 +413,24 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
 .akce-skupina button:first-child { border-top: 0; }
 .akce-skupina button:active { background: var(--fill2); }
 .akce-skupina button.tucne { font-weight: 600; }
+/* mikrofon u polí */
+.mik {
+  flex: none; width: 32px; height: 32px; margin-left: 8px; border-radius: 50%;
+  display: grid; place-items: center; color: var(--blue); background: transparent;
+}
+.mik svg { width: 20px; height: 20px; }
+.mik:active { background: var(--fill2); }
+.mik.nahrava { background: var(--red); color: #fff; animation: pulz 1.1s ease-in-out infinite; }
+.mik.zpracovava { color: var(--label3); pointer-events: none; }
+.mik.zpracovava svg { display: none; }
+.mik.zpracovava::after {
+  content: ""; width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid var(--label3); border-top-color: var(--blue); animation: toc .8s linear infinite;
+}
+@keyframes pulz { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,59,48,.5); } 50% { box-shadow: 0 0 0 7px rgba(255,59,48,0); } }
+.pole.svisle .mik { position: absolute; right: 10px; top: 4px; margin: 0; }
+.pole.svisle textarea { padding-right: 40px; }
+.pole.svisle label { padding-right: 40px; }
 .verze { text-align: center; color: var(--label3); font-size: 12px; margin-top: 18px; }
 </style>
 </head>
@@ -432,7 +450,7 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
     <button class="velke-tlacitko" id="btn-prihlasit" type="submit">Přihlásit</button>
     <div class="chyba" id="p-chyba"></div>
   </form>
-  <div class="verze">verze 17 · trvalé přihlášení na PC</div>
+  <div class="verze">verze 18 · diktování u polí</div>
 </section>
 
 <!-- ============ SEZNAM ============ -->
@@ -1489,6 +1507,7 @@ function otevri(z) {
 }
 
 function zavri() {
+  if (nahravani) zastavNahravani(true);
   skryjNavrhy();
   $("#sheet").classList.remove("otevreno");
   $("#sheet").setAttribute("aria-hidden", "true");
@@ -1642,6 +1661,118 @@ $("#btn-smazat").addEventListener("click", akce(async () => {
   zavri();
   toast("Smazáno");
 }));
+
+// ---------- diktování u polí (mikrofon) ----------
+// Nahrávka se přepíše Whisperem v naší funkci (stejná kvalita jako diktát přes Siri).
+const POLE_MIKROFON = [
+  ["#f-akce", "text"], ["#f-misto", "text"], ["#f-zakaznik", "text"], ["#f-zarizeni", "text"],
+  ["#f-predmet", "text"], ["#f-ukony", "text"], ["#f-material", "text"], ["#f-dily", "text"],
+  ["#f-prace", "hodiny"], ["#f-tam", "hodiny"], ["#f-zpet", "hodiny"], ["#f-km", "km"],
+];
+const IKONA_MIK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>';
+let nahravani = null;   // { recorder, stream, chunks, btn, el, druh, casovac }
+
+function lzeNahravat() {
+  return !!(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
+}
+function vhodnyFormat() {
+  return ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"]
+    .find((t) => MediaRecorder.isTypeSupported?.(t)) || "";
+}
+
+function pridejMikrofony() {
+  if (!lzeNahravat()) { log("mikrofon: prohlížeč nahrávání nepodporuje"); return; }
+  for (const [sel, druh] of POLE_MIKROFON) {
+    const el = $(sel);
+    const pole = el?.closest(".pole");
+    if (!pole || pole.querySelector(".mik")) continue;
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "mik"; b.innerHTML = IKONA_MIK;
+    b.setAttribute("aria-label", "Diktovat");
+    b.addEventListener("pointerdown", (e) => e.preventDefault());   // nezavírat klávesnici
+    b.addEventListener("click", akce(() => prepniNahravani(b, el, druh)));
+    pole.appendChild(b);
+  }
+}
+
+async function prepniNahravani(btn, el, druh) {
+  if (nahravani?.btn === btn) { zastavNahravani(); return; }
+  if (nahravani) zastavNahravani(true);   // jiné pole – zrušit
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (e) {
+    log("mikrofon nepovolen", e);
+    throw new Error("Mikrofon není povolený. Povol ho v nastavení prohlížeče / Safari pro tuto stránku.");
+  }
+  const typ = vhodnyFormat();
+  const recorder = new MediaRecorder(stream, typ ? { mimeType: typ } : undefined);
+  const stav = { recorder, stream, chunks: [], btn, el, druh, zrusit: false };
+  recorder.ondataavailable = (e) => { if (e.data.size) stav.chunks.push(e.data); };
+  recorder.onstop = () => dokonciNahravani(stav).catch((e) => {
+    console.error("[servis] přepis selhal", e);
+    toast(e.message || "Přepis se nepovedl", true);
+  });
+  recorder.start();
+  stav.casovac = setTimeout(() => { if (nahravani === stav) zastavNahravani(); }, 60000);   // max. 1 minuta
+  nahravani = stav;
+  btn.classList.add("nahrava");
+  log("mikrofon: nahrávám", { pole: el.id, format: recorder.mimeType });
+}
+
+function zastavNahravani(zrusit = false) {
+  const st = nahravani;
+  if (!st) return;
+  nahravani = null;
+  clearTimeout(st.casovac);
+  st.zrusit = zrusit;
+  st.btn.classList.remove("nahrava");
+  if (!zrusit) st.btn.classList.add("zpracovava");
+  try { st.recorder.stop(); } catch {}
+}
+
+async function dokonciNahravani(st) {
+  st.stream.getTracks().forEach((t) => t.stop());
+  if (st.zrusit) return;
+  try {
+    const blob = new Blob(st.chunks, { type: st.recorder.mimeType || "audio/mp4" });
+    log("mikrofon: odesílám", { pole: st.el.id, kB: Math.round(blob.size / 1024), typ: blob.type });
+    if (blob.size < 500) throw new Error("Nahrávka je prázdná – podrž mikrofon déle.");
+    const token = (await sb.auth.getSession()).data.session?.access_token;
+    if (!token) throw new Error("Nejsi přihlášený.");
+    const r = await fetch(`${SUPABASE_URL}/functions/v1/servis?akce=prepis&pole=${st.druh}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": blob.type || "audio/mp4" },
+      body: blob,
+    });
+    const data = await r.json().catch(() => ({}));
+    log("mikrofon: odpověď", { status: r.status, ...data });
+    if (!r.ok) throw new Error(data.chyba || `Přepis selhal (${r.status})`);
+    vlozDiktat(st.el, st.druh, data);
+  } finally {
+    st.btn.classList.remove("zpracovava");
+  }
+}
+
+function vlozDiktat(el, druh, { text, hodnota }) {
+  if (druh === "hodiny" || druh === "km") {
+    if (hodnota == null) { toast(`Nerozuměl jsem číslu: „${text || "…"}“`, true); return; }
+    el.value = fmtCislo(hodnota);
+  } else {
+    if (!text) { toast("Nic jsem neslyšel", true); return; }
+    if (el.tagName === "TEXTAREA" && el.value.trim()) {
+      // do víceřádkových polí se diktát přidává za existující text
+      const zacatek = /^\p{Lu}{2}/u.test(text) ? text : text.charAt(0).toLowerCase() + text.slice(1);
+      el.value = el.value.trim().replace(/[,;]\s*$/, "") + ", " + zacatek;
+    } else {
+      el.value = text.charAt(0).toUpperCase() + text.slice(1);
+    }
+  }
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+  if (el.tagName === "TEXTAREA") prizpusobVysku(el);
+  skryjNavrhy();
+}
+pridejMikrofony();
 
 // ---------- technici ----------
 function prijmeni(jmeno) { return String(jmeno).trim().split(/\s+/).slice(-1)[0]; }
