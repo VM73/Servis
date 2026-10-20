@@ -440,6 +440,38 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
 .pole.svisle textarea { padding-right: 40px; }
 .pole.svisle label { padding-right: 40px; }
 .verze { text-align: center; color: var(--label3); font-size: 12px; margin-top: 18px; }
+/* hodiny jednotlivých techniků */
+.tech-hod label { color: var(--label2); padding-left: 14px; box-sizing: border-box; }
+.tech-hod::before, #radek-clh::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: .5px solid var(--sep); }
+.den-hodiny { display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 0 16px 10px; margin-top: -2px; }
+.den-hodiny:empty { display: none; }
+.den-hodiny label { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--label2); }
+.den-hodiny input {
+  width: 46px; border: 0; outline: 0; background: var(--fill); border-radius: 7px; text-align: right;
+  font-size: 15px; padding: 4px 6px; font-variant-numeric: tabular-nums;
+}
+.den-hodiny + .den-radek::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: .5px solid var(--sep); }
+/* účty a role */
+body.ne-admin .jen-admin { display: none !important; }
+#cekani { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 24px 16px; max-width: 440px; margin: 0 auto; text-align: center; }
+#cekani h1 { font-size: 24px; margin: 0 0 8px; }
+#cekani p { color: var(--label2); margin: 0 0 6px; font-size: 15px; }
+#cekani .tlacitko-bunka { justify-content: center; }
+.technik-radek .ucet { font-size: 12px; color: var(--label2); background: var(--fill); border-radius: 6px; padding: 2px 6px; flex: none; }
+.uzivatel { padding: 10px 12px 10px 16px; position: relative; }
+.uzivatel + .uzivatel::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: .5px solid var(--sep); }
+.uzivatel .u-hlava { display: flex; align-items: center; gap: 8px; min-height: 28px; }
+.uzivatel .u-email { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uzivatel .u-cek { font-size: 12px; font-weight: 600; color: #fff; background: var(--orange); border-radius: 6px; padding: 2px 7px; }
+.uzivatel .u-volby { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.uzivatel select {
+  -webkit-appearance: none; appearance: none; border: 0; outline: 0; font: inherit; font-size: 15px;
+  background-color: var(--fill); color: var(--label); border-radius: 8px; padding: 6px 26px 6px 10px; max-width: 100%;
+  background-image: linear-gradient(45deg, transparent 50%, var(--label2) 50%), linear-gradient(135deg, var(--label2) 50%, transparent 50%);
+  background-position: right 13px center, right 9px center; background-size: 4px 4px; background-repeat: no-repeat;
+}
+.token-box { padding: 10px 16px 12px; }
+.token-box code { display: block; font: 15px/1.4 ui-monospace, Menlo, monospace; word-break: break-all; background: var(--fill); border-radius: 8px; padding: 8px 10px; -webkit-user-select: all; user-select: all; }
 </style>
 </head>
 <body>
@@ -458,7 +490,21 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
     <button class="velke-tlacitko" id="btn-prihlasit" type="submit">Přihlásit</button>
     <div class="chyba" id="p-chyba"></div>
   </form>
-  <div class="verze">verze 19 · technici po dnech</div>
+  <div class="verze">verze 21 · hodiny po technicích</div>
+</section>
+
+<!-- ============ ÚČET ČEKÁ NA SCHVÁLENÍ ============ -->
+<section id="cekani" class="skryto">
+  <img class="logo" src="icon-180.png" alt="">
+  <h1>Účet čeká na schválení</h1>
+  <p id="cekani-email"></p>
+  <p>Admin ho musí schválit v Nastavení → Uživatelé. Potom klepni na Zkusit znovu.</p>
+  <div class="form-skupina" style="margin-top:22px">
+    <button class="tlacitko-bunka" id="btn-cekani-znovu">Zkusit znovu</button>
+  </div>
+  <div class="form-skupina" style="margin-top:12px">
+    <button class="tlacitko-bunka cervene" id="btn-cekani-odhlasit">Odhlásit</button>
+  </div>
 </section>
 
 <!-- ============ SEZNAM ============ -->
@@ -593,19 +639,20 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
         <div id="f-dny"></div>
         <div class="pole den-celkem"><label>Celkem</label><span class="hodnota" id="f-dny-celkem">–</span></div>
       </div>
-      <div class="form-pozn jen-hodinove">Hodiny a km pro každý den zvlášť. Km z prvního dne se předvyplní do dalších.</div>
+      <div class="form-pozn jen-hodinove">Hodiny a km pro každý den zvlášť. Km z prvního dne se předvyplní do dalších. Pod technikem dne vyplň hodiny jen tomu, kdo byl jinou dobu.</div>
     </div>
 
     <div class="sekce-hlavicka jen-hodinove" id="h-cas">Čas</div>
     <div class="form-skupina jen-hodinove" id="skupina-cas">
       <div class="pole jen-jeden jen-hodinove"><label for="f-prace">Práce</label><input id="f-prace" inputmode="decimal" placeholder="0" autocomplete="off"><span class="jednotka">h</span></div>
+      <div class="jen-jeden jen-hodinove" id="f-hod-tech"></div>
       <div class="pole jen-jeden jen-hodinove skryto" id="radek-clh"><label>Za partu</label><span class="hodnota" id="f-clh">–</span></div>
       <div class="pole jen-servis"><label for="f-tam">Cesta tam</label><input id="f-tam" inputmode="decimal" placeholder="0" autocomplete="off"><span class="jednotka">h</span></div>
       <div class="pole jen-servis"><label for="f-zpet">Cesta zpět</label><input id="f-zpet" inputmode="decimal" placeholder="0" autocomplete="off"><span class="jednotka">h</span></div>
       <div class="pole jen-servis jen-jeden"><label>Celkem</label><span class="hodnota" id="f-celkem">–</span></div>
       <div class="pole jen-jeden"><label for="f-km">Cesta</label><input id="f-km" inputmode="decimal" placeholder="0" autocomplete="off"><span class="jednotka">km</span></div>
     </div>
-    <div class="form-pozn jen-hodinove">Hodiny jako 1,5 nebo 1:30. Kilometry celkem tam i zpět.</div>
+    <div class="form-pozn jen-hodinove">Hodiny jako 1,5 nebo 1:30. U techniků vyplň jen toho, kdo byl jinou dobu než celá parta. Kilometry celkem tam i zpět.</div>
 
     <div class="sekce-hlavicka">Fotky</div>
     <div class="form-skupina">
@@ -620,6 +667,7 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
     <div class="sekce-hlavicka">Stav</div>
     <div class="form-skupina">
       <div class="pole"><label for="f-kontrola" style="width:auto">Ke kontrole</label><input type="checkbox" class="prepinac" id="f-kontrola"></div>
+      <div class="pole" id="radek-zapsal"><label>Zapsal</label><span class="hodnota" id="f-zapsal"></span></div>
     </div>
 
     <div id="sekce-prepis" class="skryto">
@@ -648,17 +696,37 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
     </div>
   </div>
   <div class="sheet-obsah">
+    <div class="sekce-hlavicka">Můj účet</div>
+    <div class="form-skupina">
+      <div class="pole"><label>E-mail</label><span class="hodnota" id="ucet-email"></span></div>
+      <div class="pole"><label>Role</label><span class="hodnota" id="ucet-role"></span></div>
+      <div class="pole"><label>Technik</label><span class="hodnota" id="ucet-technik"></span></div>
+      <button class="tlacitko-bunka" id="btn-heslo" style="border-top:.5px solid var(--sep)">Změnit heslo</button>
+      <button class="tlacitko-bunka" id="btn-token" style="border-top:.5px solid var(--sep)">Token pro Siri zkratku…</button>
+      <div class="token-box skryto" id="token-box">
+        <code id="token-text"></code>
+        <button class="mini-btn" id="btn-token-kopirovat">Kopírovat</button>
+      </div>
+    </div>
+    <div class="form-pozn" id="token-pozn">Jen pro iPhone. Token se vloží do zkratky jako hlavička x-zkratka-token. Nový token zneplatní ten předchozí.</div>
+
     <div class="sekce-hlavicka">Technici</div>
     <div class="form-skupina">
       <div id="seznam-techniku"></div>
-      <form class="pole pridat-technika" id="form-technik" autocomplete="off">
+      <form class="pole pridat-technika jen-admin" id="form-technik" autocomplete="off">
         <input id="novy-technik" placeholder="Jméno a příjmení" autocapitalize="words" enterkeyhint="done">
         <button type="submit" class="mini-btn">Přidat</button>
       </form>
     </div>
-    <div class="form-pozn">★ označuje tebe – při diktování „byl jsem…“ se doplníš automaticky. Klepnutím na jméno ho přejmenuješ (změní se i ve starých záznamech).</div>
+    <div class="form-pozn jen-admin">Klepnutím na jméno ho přejmenuješ (změní se i ve starých záznamech). Technika s účtem propojíš níž v sekci Uživatelé – při diktování „byl jsem…“ se pak doplní sám.</div>
 
-    <div id="sekce-odebrani" class="skryto">
+    <div class="jen-admin">
+      <div class="sekce-hlavicka">Uživatelé</div>
+      <div class="form-skupina"><div id="seznam-uzivatelu"></div></div>
+      <div class="form-pozn">Nový účet založíš v Supabase (Authentication → Users → Add user). Tady ho pak schválíš, nastavíš roli a propojíš s technikem.</div>
+    </div>
+
+    <div id="sekce-odebrani" class="skryto jen-admin">
       <div class="sekce-hlavicka">Odebraní technici</div>
       <div class="form-skupina"><div id="seznam-odebranych"></div></div>
       <div class="form-pozn">Zůstávají ve starých záznamech, jen se už nenabízejí.</div>
@@ -787,12 +855,16 @@ const ROZSAH = {
   ukony: ["servisni_ukony"],
   dily: ["nahradni_dily"],
 };
-const SLOUPCE = "id,skupina,typ,uctovani,akce,datum_zasahu,vytvoreno,misto,zakaznik,zarizeni,predmet,servisni_ukony,technici,material,nahradni_dily," +
-  "prace_hod,cesta_tam_hod,cesta_zpet_hod,cesta_km,prepis,audio_cesta,fotky,ke_kontrole";
+const SLOUPCE = "id,user_id,skupina,typ,uctovani,akce,datum_zasahu,vytvoreno,misto,zakaznik,zarizeni,predmet,servisni_ukony,technici,material,nahradni_dily," +
+  "prace_hod,cesta_tam_hod,cesta_zpet_hod,cesta_km,hodiny_technici,prepis,audio_cesta,fotky,ke_kontrole";
 
 let uzivatel = null;
+let profil = null;     // můj profil { id, email, role, aktivni } – null = před migrací účtů
+let profily = [];      // všechny účty (pro jména autorů a správu uživatelů)
 let zaznamy = [];
-let technici = [];   // [{ id, jmeno, ja, aktivni }]
+let technici = [];   // [{ id, jmeno, ucet, ja, aktivni }] – ja = propojený s mým účtem
+const ROLE_NAZEV = { admin: "Admin", kancelar: "Kancelář", technik: "Technik" };
+const jeAdmin = () => !profil || profil.role === "admin";
 const stav = { technik: "", q: "", typ: "vse", rozsah: "vse", obdobi: "vse", kontrola: false, fotky: false };
 let aktualni = null;      // otevřený záznam
 let zmeneno = false;      // po zavření detailu znovu načíst seznam
@@ -857,6 +929,35 @@ function ctiHodiny(v, nazev) {
   return Math.round(h * 100) / 100;
 }
 
+// hodiny jednoho technika v záznamu (kdo není v hodiny_technici, pracoval prace_hod)
+function hodinyTechnika(z, jmeno) {
+  const v = z.hodiny_technici?.[jmeno];
+  return v != null ? Number(v) : (Number(z.prace_hod) || 0);
+}
+// člověkohodiny záznamu
+function clovekohodinyZ(z) {
+  const t = z.technici || [];
+  if (!t.length) return Number(z.prace_hod) || 0;
+  return t.reduce((s, j) => s + hodinyTechnika(z, j), 0);
+}
+function maRozdilneHodiny(z) {
+  return (z.technici || []).some((j) => z.hodiny_technici?.[j] != null && Number(z.hodiny_technici[j]) !== Number(z.prace_hod));
+}
+// {"jméno": "4"} → {"jméno": 4} jen pro techniky dne s vyplněnou hodnotou; null když nic
+function ctiHodinyTechniku(texty, jmena) {
+  const out = {};
+  for (const j of jmena) {
+    const h = ctiHodiny(texty?.[j] ?? "", `Hodiny – ${j}`);
+    if (h != null) out[j] = h;
+  }
+  return Object.keys(out).length ? out : null;
+}
+function textyHodin(obj) {
+  const out = {};
+  for (const [j, h] of Object.entries(obj || {})) out[j] = fmtCislo(Number(h));
+  return out;
+}
+
 let toastCas;
 function toast(text, chyba = false) {
   const t = $("#toast");
@@ -883,10 +984,34 @@ window.addEventListener("unhandledrejection", (e) => {
 });
 
 // ---------- přihlášení ----------
-function ukaz(prihlasen) {
+function ukaz(prihlasen, cekani = false) {
   $("#prihlaseni").classList.toggle("skryto", prihlasen);
-  $("#aplikace").classList.toggle("skryto", !prihlasen);
+  $("#aplikace").classList.toggle("skryto", !prihlasen || cekani);
+  $("#cekani").classList.toggle("skryto", !prihlasen || !cekani);
 }
+
+// po přihlášení: můj profil (role, schválení), pak data
+async function start() {
+  const { data, error } = await sb.from("profily").select("id,email,role,aktivni").eq("id", uzivatel.id).maybeSingle();
+  if (error) {
+    // tabulka profily ještě neexistuje – appka běží jako dřív pro jednoho uživatele
+    log("profil nenačten", error);
+    profil = null;
+    toast("Spusť v Supabase migraci migrace-ucty.sql", true);
+  } else if (!data?.aktivni) {
+    profil = data;
+    $("#cekani-email").textContent = uzivatel.email || "";
+    ukaz(true, true);
+    return;
+  } else {
+    profil = data;
+  }
+  document.body.classList.toggle("ne-admin", !jeAdmin());
+  ukaz(true);
+  await nacti();
+}
+$("#btn-cekani-znovu").addEventListener("click", () => start().catch(chybaNacteni));
+$("#btn-cekani-odhlasit").addEventListener("click", akce(async () => { await sb.auth.signOut(); }));
 
 $("#form-prihlaseni").addEventListener("submit", akce(async (e) => {
   e.preventDefault();
@@ -927,9 +1052,9 @@ sb.auth.onAuthStateChange((udalost, session) => {
   const novy = session?.user ?? null;
   const zmena = novy?.id !== uzivatel?.id;
   uzivatel = novy;
-  ukaz(!!uzivatel);
-  if (uzivatel && zmena) setTimeout(() => nacti().catch(chybaNacteni), 0);
-  if (!uzivatel) { zaznamy = []; urlCache.clear(); }
+  if (!uzivatel) ukaz(false);
+  if (uzivatel && zmena) setTimeout(() => start().catch(chybaNacteni), 0);
+  if (!uzivatel) { zaznamy = []; profil = null; profily = []; urlCache.clear(); }
 });
 
 function chybaNacteni(e) {
@@ -988,9 +1113,11 @@ function vykresli() {
   const vysledek = filtruj();
 
   let prace = 0, cesta = 0, km = 0, clh = 0;
+  let vlastni = 0;
   for (const z of vysledek) {
     prace += Number(z.prace_hod) || 0;
-    clh += (Number(z.prace_hod) || 0) * Math.max(1, (z.technici || []).length);
+    clh += clovekohodinyZ(z);
+    if (stav.technik) vlastni += hodinyTechnika(z, stav.technik);
     cesta += (Number(z.cesta_tam_hod) || 0) + (Number(z.cesta_zpet_hod) || 0);
     km += Number(z.cesta_km) || 0;
   }
@@ -998,7 +1125,7 @@ function vykresli() {
   // hlavní číslo = člověkohodiny (hodiny × technici); pod ním čas party, pokud se liší
   // při filtru na jednoho technika jsou to jeho vlastní hodiny
   if (stav.technik) {
-    $("#s-prace").textContent = fmtCislo(prace) + " h";
+    $("#s-prace").textContent = fmtCislo(vlastni) + " h";
     $("#s-prace-pod").textContent = prijmeni(stav.technik);
   } else {
     $("#s-prace").textContent = fmtCislo(clh) + " h";
@@ -1044,8 +1171,9 @@ function vykresli() {
       const znacky = [];
       if (z.ke_kontrole) znacky.push(`<span class="varovani">${IKONY.pozor}Ke kontrole</span>`);
       if (z.skupina && poradi.has(z.id)) znacky.push(`<span>${IKONY.kalendar}den ${poradi.get(z.id)}</span>`);
-      if (z.prace_hod != null) znacky.push(`<span>${IKONY.prace}${fmtH(Number(z.prace_hod))}${z.technici.length > 1
-        ? ` × ${z.technici.length} = ${fmtH(Number(z.prace_hod) * z.technici.length)}` : ""}</span>`);
+      if (z.prace_hod != null || z.hodiny_technici) znacky.push(`<span>${IKONY.prace}${
+        maRozdilneHodiny(z) ? `${z.technici.map((j) => fmtCislo(hodinyTechnika(z, j))).join(" + ")} = ${fmtH(clovekohodinyZ(z))}`
+        : `${fmtH(Number(z.prace_hod))}${z.technici.length > 1 ? ` × ${z.technici.length} = ${fmtH(clovekohodinyZ(z))}` : ""}`}</span>`);
       if (cestaZ) znacky.push(`<span>${IKONY.auto}${fmtH(cestaZ)}</span>`);
       if (z.technici.length) znacky.push(`<span>${IKONY.osoba}${esc(z.technici.map(prijmeni).join(", "))}</span>`);
       if (z.uctovani) znacky.push(`<span class="uct">${IKONY.dokument}${NAZVY_UCTOVANI[z.uctovani]}</span>`);
@@ -1199,7 +1327,7 @@ function souhrnVyberu(rows) {
   let prace = 0, cesta = 0, km = 0, clovekohodiny = 0;
   for (const z of rows) {
     prace += Number(z.prace_hod) || 0;
-    clovekohodiny += (Number(z.prace_hod) || 0) * Math.max(1, (z.technici || []).length);
+    clovekohodiny += clovekohodinyZ(z);
     cesta += (Number(z.cesta_tam_hod) || 0) + (Number(z.cesta_zpet_hod) || 0);
     km += Number(z.cesta_km) || 0;
   }
@@ -1214,7 +1342,7 @@ function vyberProExport() {
 // CSV pro český Excel: středník, desetinná čárka, UTF-8 s BOM
 function vytvorCsv(rows) {
   const hlavicka = ["Datum", "Den", "Typ", "Účtování", "Akce", "Místo", "Zákazník", "Technici", "Počet techniků", "Zařízení", "Předmět / provedená práce", "Servisní úkony",
-    "Materiál", "Náhradní díly", "Práce [h]", "Člověkohodiny [h]", "Cesta tam [h]", "Cesta zpět [h]", "Cesta [km]", "Ke kontrole"];
+    "Materiál", "Náhradní díly", "Práce [h]", "Hodiny techniků", "Člověkohodiny [h]", "Cesta tam [h]", "Cesta zpět [h]", "Cesta [km]", "Ke kontrole"];
   const radky = [hlavicka];
   for (const z of rows) {
     const [y, m, d] = (z.datum_zasahu || "").split("-").map(Number);
@@ -1225,7 +1353,9 @@ function vytvorCsv(rows) {
       z.uctovani ? NAZVY_UCTOVANI[z.uctovani] : "hodinově",
       z.akce, z.misto, z.zakaznik, z.technici.join(", "), z.technici.length || "", z.zarizeni,
       z.predmet, z.servisni_ukony, z.material, z.nahradni_dily,
-      cisloCsv(z.prace_hod), z.prace_hod != null ? cisloCsv(Number(z.prace_hod) * Math.max(1, z.technici.length)) : "",
+      cisloCsv(z.prace_hod),
+      z.technici.length > 1 && (z.prace_hod != null || z.hodiny_technici) ? z.technici.map((j) => `${j} ${cisloCsv(hodinyTechnika(z, j))}`).join("; ") : "",
+      z.prace_hod != null || z.hodiny_technici ? cisloCsv(clovekohodinyZ(z)) : "",
       cisloCsv(z.cesta_tam_hod), cisloCsv(z.cesta_zpet_hod), cisloCsv(z.cesta_km),
       z.ke_kontrole ? "ano" : "",
     ]);
@@ -1233,7 +1363,7 @@ function vytvorCsv(rows) {
   const s = souhrnVyberu(rows);
   radky.push([]);
   radky.push(["Celkem", "", pocetZaznamu(rows.length), "", "", "", "", "", "", "", "", "", "", "",
-    cisloCsv(s.prace), cisloCsv(s.clovekohodiny), "", s.cesta ? cisloCsv(s.cesta) : "", cisloCsv(s.km), ""]);
+    cisloCsv(s.prace), "", cisloCsv(s.clovekohodiny), "", s.cesta ? cisloCsv(s.cesta) : "", cisloCsv(s.km), ""]);
   radky.push(["Výběr", popisFiltru()]);
   return "\uFEFF" + radky.map((r) => r.map(bunkaCsv).join(";")).join("\r\n");
 }
@@ -1248,7 +1378,8 @@ function vytvorText(rows) {
       : [z.zakaznik, z.misto].filter(Boolean).join(", ") || "Servis";
     out.push(`${d}. ${m}. ${y} – ${hlava}${z.uctovani ? ` (${MALE_UCTOVANI[z.uctovani]})` : ""}`);
     if (z.typ === "montaz" && (z.misto || z.zakaznik)) out.push(`  ${[z.zakaznik, z.misto].filter(Boolean).join(", ")}`);
-    if (z.technici.length) out.push(`  Technici: ${z.technici.join(", ")}`);
+    if (z.technici.length) out.push(`  Technici: ${maRozdilneHodiny(z)
+      ? z.technici.map((j) => `${j} ${fmtCislo(hodinyTechnika(z, j))} h`).join(", ") : z.technici.join(", ")}`);
     if (z.zarizeni) out.push(`  Zařízení: ${z.zarizeni}`);
     if (z.predmet) out.push(`  ${z.typ === "montaz" ? "Práce" : "Předmět"}: ${z.predmet}`);
     if (z.servisni_ukony) out.push(`  Servisní úkony: ${z.servisni_ukony}`);
@@ -1366,7 +1497,8 @@ function vykresliDny() {
       <input class="hod jen-hodinove" inputmode="decimal" placeholder="0" value="${esc(h.prace ?? "")}" aria-label="Hodiny"><span class="jednotka jen-hodinove">h</span>
       <input class="km jen-hodinove" inputmode="decimal" placeholder="0" value="${esc(h.km ?? "")}" aria-label="Kilometry"><span class="jednotka jen-hodinove">km</span>
     </div>
-    <div class="den-technici" data-datum="${d}">${technikyDneHtml(d)}</div>`;
+    <div class="den-technici" data-datum="${d}">${technikyDneHtml(d)}</div>
+    <div class="den-hodiny jen-hodinove" data-datum="${d}">${hodinyDneHtml(d)}</div>`;
   }).join("");
   if (datumy.length >= 31) toast("Rozsah je omezený na 31 dní", true);
   if (aktualni) { aktualizujSpolecneTechniky(); vykresliVyberTechniku(); }
@@ -1383,6 +1515,13 @@ function technikyDneHtml(d) {
   const jmena = jmenaKNabidce();
   if (!jmena.length) return "";
   return jmena.map((j) => `<button type="button" class="${zvolene.has(j) ? "on" : ""}" data-jmeno="${esc(j)}" title="${esc(j)}">${esc(prijmeni(j))}</button>`).join("");
+}
+// hodiny jednotlivých techniků dne (jen když je jich ten den víc)
+function hodinyDneHtml(d) {
+  const h = hodnotyDnu.get(d) || {};
+  const jmena = h.technici || [];
+  if (jmena.length < 2) return "";
+  return jmena.map((j) => `<label title="${esc(j)}">${esc(prijmeni(j))}<input class="ht" data-jmeno="${esc(j)}" inputmode="decimal" placeholder="${esc(h.prace || "0")}" value="${esc(h.hodTech?.[j] ?? "")}" aria-label="Hodiny ${esc(j)}">h</label>`).join("");
 }
 function datumyFormulare() { return [...document.querySelectorAll("#f-dny .den-radek")].map((r) => r.dataset.datum); }
 function serad(jmena) {
@@ -1404,6 +1543,8 @@ $("#f-dny").addEventListener("click", (e) => {
   h.technici = serad(t);
   hodnotyDnu.set(d, h);
   b.closest(".den-technici").innerHTML = technikyDneHtml(d);
+  const dh = document.querySelector(`#f-dny .den-hodiny[data-datum="${d}"]`);
+  if (dh) dh.innerHTML = hodinyDneHtml(d);
   aktualizujSpolecneTechniky();
   vykresliVyberTechniku();
   prepoctiDny();
@@ -1414,8 +1555,11 @@ function prepoctiDny() {
   for (const r of document.querySelectorAll("#f-dny .den-radek")) {
     try {
       const hd = ctiHodiny(r.querySelector(".hod").value, "Hodiny") || 0;
-      h += hd;
-      clh += hd * Math.max(1, (hodnotyDnu.get(r.dataset.datum)?.technici || []).length);
+      const hv = hodnotyDnu.get(r.dataset.datum) || {};
+      const ind = ctiHodinyTechniku(hv.hodTech, hv.technici || []);
+      const den = ind && !r.querySelector(".hod").value.trim() ? Math.max(...Object.values(ind)) : hd;
+      h += den;
+      clh += (hv.technici || []).length ? hv.technici.reduce((s, j) => s + (ind?.[j] ?? den), 0) : den;
       km += ctiKm(r.querySelector(".km").value) || 0;
     } catch { chyba = true; }
   }
@@ -1427,11 +1571,22 @@ function prepoctiDny() {
 }
 
 $("#f-dny").addEventListener("input", (e) => {
+  if (e.target.classList.contains("ht")) {
+    const d = e.target.closest(".den-hodiny").dataset.datum;
+    const h = hodnotyDnu.get(d) || {};
+    h.hodTech = { ...(h.hodTech || {}), [e.target.dataset.jmeno]: e.target.value };
+    hodnotyDnu.set(d, h);
+    prepoctiDny();
+    return;
+  }
   const r = e.target.closest(".den-radek");
   if (!r) return;
   const d = r.dataset.datum;
   const zaznam = hodnotyDnu.get(d) || {};
-  if (e.target.classList.contains("hod")) zaznam.prace = e.target.value;
+  if (e.target.classList.contains("hod")) {
+    zaznam.prace = e.target.value;
+    document.querySelectorAll(`#f-dny .den-hodiny[data-datum="${d}"] .ht`).forEach((i) => { i.placeholder = e.target.value || "0"; });
+  }
   if (e.target.classList.contains("km")) {
     // km z prvního dne se kopírují do dalších dnů, které jsou prázdné nebo měly stejnou hodnotu
     const radky = [...document.querySelectorAll("#f-dny .den-radek")];
@@ -1461,14 +1616,14 @@ function nastavVicedni(zapnout) {
     const od = $("#f-datum").value || dnes();
     if (!$("#f-datum-do").value || $("#f-datum-do").value <= od) $("#f-datum-do").value = pridejDen(od, 1);
     // hodnoty z jednodenního formuláře převzít do prvního dne
-    if (!hodnotyDnu.has(od) && ($("#f-prace").value || $("#f-km").value)) {
-      hodnotyDnu.set(od, { prace: $("#f-prace").value, km: $("#f-km").value });
+    if (!hodnotyDnu.has(od) && ($("#f-prace").value || $("#f-km").value || Object.values(aktualni?.hodTech || {}).some(Boolean))) {
+      hodnotyDnu.set(od, { prace: $("#f-prace").value, km: $("#f-km").value, hodTech: { ...(aktualni?.hodTech || {}) } });
     }
     vykresliDny();
   } else {
     const od = $("#f-datum").value;
     const h = hodnotyDnu.get(od);
-    if (h) { $("#f-prace").value = h.prace ?? ""; $("#f-km").value = h.km ?? ""; prepoctiCelkem(); }
+    if (h) { $("#f-prace").value = h.prace ?? ""; $("#f-km").value = h.km ?? ""; aktualni.hodTech = { ...(h.hodTech || {}) }; prepoctiCelkem(); vykresliHodinyTechniku(); }
   }
 }
 $("#f-vicedni").addEventListener("change", (e) => nastavVicedni(e.target.checked));
@@ -1524,6 +1679,7 @@ function otevri(z) {
         prace: s.prace_hod != null ? fmtCislo(Number(s.prace_hod)) : "",
         km: s.cesta_km != null ? fmtCislo(Number(s.cesta_km)) : "",
         technici: [...(s.technici || [])],
+        hodTech: textyHodin(s.hodiny_technici),
       });
     }
     $("#f-datum-do").value = skupina[skupina.length - 1].datum_zasahu;
@@ -1541,10 +1697,13 @@ function otevri(z) {
   audio.removeAttribute("src");
   if (aktualni.audio_cesta) nactiAudio(aktualni.audio_cesta).catch((e) => log("audio", e));
 
+  $("#radek-zapsal").classList.toggle("skryto", novy || !aktualni.user_id);
+  $("#f-zapsal").textContent = novy ? "" : jmenoAutora(aktualni.user_id);
   $("#sekce-smazat").classList.toggle("skryto", novy);
   $("#btn-smazat").textContent = skupina.length > 1 ? `Smazat všech ${skupina.length} dní` : "Smazat záznam";
   vykresliFotky().catch((e) => log("fotky", e));
   vykresliRychleUkony();
+  aktualni.hodTech = novy || skupina.length > 1 ? {} : textyHodin(aktualni.hodiny_technici);
   if (novy) aktualni.technici = vychoziTechnici();
   else aktualni.technici = skupina.length > 1
     ? serad(new Set(skupina.flatMap((s) => s.technici || [])))
@@ -1573,13 +1732,32 @@ function zavri() {
 
 // člověkohodiny = hodiny × počet techniků
 function pocetTechniku() { return Math.max(1, (aktualni?.technici || []).length); }
+// řádky s hodinami jednotlivých techniků (jednodenní záznam, 2 a více techniků)
+function vykresliHodinyTechniku() {
+  const el = $("#f-hod-tech");
+  const jmena = aktualni?.technici || [];
+  if (jmena.length < 2) { el.innerHTML = ""; return; }
+  const ph = $("#f-prace").value || "0";
+  el.innerHTML = jmena.map((j) => `<div class="pole tech-hod"><label title="${esc(j)}">${esc(prijmeni(j))}</label><input class="ht" data-jmeno="${esc(j)}" inputmode="decimal" placeholder="${esc(ph)}" value="${esc(aktualni.hodTech?.[j] ?? "")}" autocomplete="off" aria-label="Hodiny ${esc(j)}"><span class="jednotka">h</span></div>`).join("");
+}
+$("#f-hod-tech").addEventListener("input", (e) => {
+  if (!e.target.classList.contains("ht") || !aktualni) return;
+  aktualni.hodTech = { ...(aktualni.hodTech || {}), [e.target.dataset.jmeno]: e.target.value };
+  prepoctiClh();
+});
 function prepoctiClh() {
   const n = pocetTechniku();
-  let p = 0;
-  try { p = ctiHodiny($("#f-prace").value, "Práce") || 0; } catch { p = NaN; }
+  const jmena = aktualni?.technici || [];
+  let p = 0, ind = null;
+  try { p = ctiHodiny($("#f-prace").value, "Práce") || 0; ind = ctiHodinyTechniku(aktualni?.hodTech, jmena); } catch { p = NaN; }
+  document.querySelectorAll("#f-hod-tech .ht").forEach((i) => { i.placeholder = $("#f-prace").value || "0"; });
   $("#radek-clh").classList.toggle("skryto", n < 2);
-  $("#f-clh").textContent = Number.isNaN(p) ? "neplatná hodnota"
-    : p ? `${fmtCislo(p)} h × ${n} technici = ${fmtCislo(p * n)} h` : `× ${n} technici`;
+  if (Number.isNaN(p)) $("#f-clh").textContent = "neplatná hodnota";
+  else if (ind) {
+    const zaklad = $("#f-prace").value.trim() ? p : Math.max(...Object.values(ind));
+    const h = jmena.map((j) => ind[j] ?? zaklad);
+    $("#f-clh").textContent = `${h.map(fmtCislo).join(" + ")} = ${fmtCislo(h.reduce((a, b) => a + b, 0))} h`;
+  } else $("#f-clh").textContent = p ? `${fmtCislo(p)} h × ${n} technici = ${fmtCislo(p * n)} h` : `× ${n} technici`;
   if (jeVicedni()) prepoctiDny();
 }
 $("#f-prace").addEventListener("input", prepoctiClh);
@@ -1612,22 +1790,37 @@ function ctiFormular() {
 // údaje jednotlivých dnů
 function ctiDny() {
   if (!jeVicedni()) {
-    return [{
+    const ind = ctiHodinyTechniku(aktualni.hodTech, aktualni.technici || []);
+    return [hotovyDen({
       datum: $("#f-datum").value || dnes(),
       prace_hod: ctiHodiny($("#f-prace").value, "Práce"),
       cesta_km: ctiKm($("#f-km").value),
-    }];
+      hodiny_technici: ind,
+    })];
   }
   const radky = [...document.querySelectorAll("#f-dny .den-radek")];
   if (radky.length < 2) throw new Error("Pro více dní nastav datum Do později než Od.");
-  return radky.map((r) => ({
-    datum: r.dataset.datum,
-    prace_hod: ctiHodiny(r.querySelector(".hod").value, `Hodiny (${r.dataset.datum})`),
-    cesta_km: ctiKm(r.querySelector(".km").value),
-    technici: [...(hodnotyDnu.get(r.dataset.datum)?.technici || aktualni.technici || [])],
-  }));
+  return radky.map((r) => {
+    const technici = [...(hodnotyDnu.get(r.dataset.datum)?.technici || aktualni.technici || [])];
+    return hotovyDen({
+      datum: r.dataset.datum,
+      prace_hod: ctiHodiny(r.querySelector(".hod").value, `Hodiny (${r.dataset.datum})`),
+      cesta_km: ctiKm(r.querySelector(".km").value),
+      technici,
+      hodiny_technici: ctiHodinyTechniku(hodnotyDnu.get(r.dataset.datum)?.hodTech, technici),
+    });
+  });
+}
+// bez hodin party, ale s hodinami techniků → hodiny party = nejdelší; hodnoty shodné s partou se neukládají
+function hotovyDen(d) {
+  if (!d.hodiny_technici) return d;
+  if (d.prace_hod == null) d.prace_hod = Math.max(...Object.values(d.hodiny_technici));
+  for (const [j, h] of Object.entries(d.hodiny_technici)) if (h === d.prace_hod) delete d.hodiny_technici[j];
+  if (!Object.keys(d.hodiny_technici).length) d.hodiny_technici = null;
+  return d;
 }
 
+const BEZ_PRAVA = "Tento záznam nemůžeš upravit – zapsal ho někdo jiný a nejsi v něm uvedený jako technik.";
 async function ulozit({ zavrit = true } = {}) {
   const spolecne = ctiFormular();
   const dny = ctiDny();
@@ -1649,6 +1842,7 @@ async function ulozit({ zavrit = true } = {}) {
       prace_hod: den.prace_hod,
       cesta_km: den.cesta_km,
       technici: den.technici ?? spolecne.technici,
+      hodiny_technici: den.hodiny_technici ?? null,
       // cesta v hodinách, materiál a díly jen u prvního dne – v přehledech se nesčítají vícekrát
       cesta_tam_hod: i === 0 ? spolecne.cesta_tam_hod : null,
       cesta_zpet_hod: i === 0 ? spolecne.cesta_zpet_hod : null,
@@ -1662,17 +1856,19 @@ async function ulozit({ zavrit = true } = {}) {
   });
 
   for (const u of upravy) {
-    const { id, ...data } = u;
-    const { error } = await sb.from("zaznamy").update(data).eq("id", id);
+    const { id, ...radek } = u;
+    const { data, error } = await sb.from("zaznamy").update(radek).eq("id", id).select("id");
     if (error) throw error;
+    if (!data?.length) throw new Error(BEZ_PRAVA);
   }
   if (vlozit.length) {
     const { error } = await sb.from("zaznamy").insert(vlozit);
     if (error) throw error;
   }
   if (smazat.length) {
-    const { error } = await sb.from("zaznamy").delete().in("id", smazat);
+    const { data, error } = await sb.from("zaznamy").delete().in("id", smazat).select("id");
     if (error) throw error;
+    if ((data?.length ?? 0) < smazat.length) toast("Některé dny nešlo smazat – nemáš k nim oprávnění", true);
   }
   log("uloženo", { upraveno: upravy.length, vlozeno: vlozit.length, smazano: smazat.length });
 
@@ -1701,6 +1897,10 @@ $("#btn-smazat").addEventListener("click", akce(async () => {
   const zazn = zaznamy.filter((z) => ids.includes(z.id));
   if (!confirm(ids.length > 1 ? `Smazat všech ${ids.length} dní včetně fotek a nahrávky?`
     : "Smazat tento záznam včetně fotek a nahrávky?")) return;
+  // nejdřív záznam (ověří oprávnění), potom soubory
+  const { data: smazane, error } = await sb.from("zaznamy").delete().in("id", ids).select("id");
+  if (error) throw error;
+  if (!smazane?.length) throw new Error("Tento záznam nemůžeš smazat – zapsal ho někdo jiný a nejsi v něm uvedený jako technik.");
   const fotky = [...new Set([...aktualni.fotky, ...zazn.flatMap((z) => z.fotky || [])])];
   if (fotky.length) {
     const { error } = await sb.storage.from("fotky").remove(fotky);
@@ -1711,8 +1911,6 @@ $("#btn-smazat").addEventListener("click", akce(async () => {
     const { error } = await sb.storage.from("nahravky").remove(audia);
     if (error) log("mazání nahrávky", error);
   }
-  const { error } = await sb.from("zaznamy").delete().in("id", ids);
-  if (error) throw error;
   zmeneno = true;
   zavri();
   toast("Smazáno");
@@ -1835,7 +2033,13 @@ function prijmeni(jmeno) { return String(jmeno).trim().split(/\s+/).slice(-1)[0]
 const aktivniTechnici = () => technici.filter((t) => t.aktivni);
 
 async function nactiTechniky() {
-  const { data, error } = await sb.from("technici").select("id,jmeno,ja,aktivni").order("jmeno");
+  let { data, error } = await sb.from("technici").select("id,jmeno,ucet,aktivni").order("jmeno");
+  if (!error) data = data.map((t) => ({ ...t, ja: t.ucet === uzivatel?.id }));
+  else if (!profil) ({ data, error } = await sb.from("technici").select("id,jmeno,ja,aktivni").order("jmeno"));   // před migrací účtů
+  if (profil) {
+    const r = await sb.from("profily").select("id,email,role,aktivni").order("vytvoreno");
+    if (r.error) log("profily nenačteny", r.error); else profily = r.data;
+  }
   if (error) {
     log("technici nenačteni", error);
     technici = [];
@@ -1874,6 +2078,7 @@ function vykresliVyberTechniku() {
   $("#f-technici").innerHTML = jmena.length
     ? jmena.map((j) => { const st = stav(j); return `<button type="button" class="${st}" data-jmeno="${esc(j)}">${st === "on" ? "✓ " : st ? "◐ " : ""}${esc(j)}</button>`; }).join("")
     : `<span class="prazdne">Zatím žádní technici – <a href="#" id="odkaz-nastaveni">přidej je v Nastavení</a>.</span>`;
+  vykresliHodinyTechniku();
 }
 $("#f-technici").addEventListener("click", (e) => {
   if (e.target.id === "odkaz-nastaveni") { e.preventDefault(); otevriNastaveni(); return; }
@@ -1929,6 +2134,8 @@ function otevriNastaveni() {
   document.body.classList.add("zamceno");
 }
 function zavriNastaveni() {
+  $("#token-box").classList.add("skryto");
+  $("#token-text").textContent = "";
   $("#nastaveni").classList.remove("otevreno");
   $("#nastaveni").setAttribute("aria-hidden", "true");
   if (!$("#sheet").classList.contains("otevreno")) document.body.classList.remove("zamceno");
@@ -1937,15 +2144,27 @@ function zavriNastaveni() {
 $("#btn-nastaveni").addEventListener("click", otevriNastaveni);
 $("#btn-nastaveni-zavrit").addEventListener("click", zavriNastaveni);
 
+function emailUctu(id) { return profily.find((p) => p.id === id)?.email || ""; }
+// kdo záznam zapsal: jméno technika propojeného s účtem, jinak e-mail
+function jmenoAutora(id) {
+  if (!id) return "";
+  return technici.find((t) => t.ucet === id)?.jmeno || emailUctu(id) || (id === uzivatel?.id ? uzivatel.email : "jiný uživatel");
+}
+
 function vykresliNastaveni() {
   const aktivni = aktivniTechnici();
   const odebrani = technici.filter((t) => !t.aktivni);
+  const admin = jeAdmin();
+  $("#ucet-email").textContent = uzivatel?.email || "";
+  $("#ucet-role").textContent = profil ? ROLE_NAZEV[profil.role] : "–";
+  $("#ucet-technik").textContent = technici.find((t) => t.ja)?.jmeno || "nepropojen";
   $("#seznam-techniku").innerHTML = aktivni.map((t) => `
     <div class="technik-radek" data-id="${esc(t.id)}">
-      <button class="hvezda${t.ja ? " on" : ""}" data-akce="ja" aria-label="To jsem já">${t.ja ? "★" : "☆"}</button>
-      <button class="jmeno" data-akce="prejmenovat">${esc(t.jmeno)}</button>
-      <button class="odebrat" data-akce="odebrat">Odebrat</button>
-    </div>`).join("");
+      ${admin ? `<button class="jmeno" data-akce="prejmenovat">${esc(t.jmeno)}</button>` : `<span class="jmeno">${esc(t.jmeno)}</span>`}
+      ${t.ucet ? `<span class="ucet" title="${esc(emailUctu(t.ucet))}">účet</span>` : ""}
+      ${admin ? `<button class="odebrat" data-akce="odebrat">Odebrat</button>` : ""}
+    </div>`).join("") || (admin ? "" : `<div class="pole"><span class="hodnota" style="text-align:left">Zatím žádní technici</span></div>`);
+  vykresliUzivatele();
   $("#sekce-odebrani").classList.toggle("skryto", !odebrani.length);
   $("#seznam-odebranych").innerHTML = odebrani.map((t) => `
     <div class="technik-radek" data-id="${esc(t.id)}">
@@ -1974,8 +2193,7 @@ $("#form-technik").addEventListener("submit", akce(async (e) => {
       if (error) throw error;
     } else { toast("Tento technik už v seznamu je", true); return; }
   } else {
-    const prvni = !technici.length;
-    const { error } = await sb.from("technici").insert({ jmeno, ja: prvni });
+    const { error } = await sb.from("technici").insert({ jmeno });
     if (error) throw error;
   }
   $("#novy-technik").value = "";
@@ -1989,11 +2207,7 @@ async function akceTechnika(e) {
   const t = technici.find((x) => x.id === b.closest(".technik-radek").dataset.id);
   if (!t) return;
   const a = b.dataset.akce;
-  if (a === "ja") {
-    let r = await sb.from("technici").update({ ja: false }).eq("ja", true);
-    if (r.error) throw r.error;
-    if (!t.ja) { r = await sb.from("technici").update({ ja: true }).eq("id", t.id); if (r.error) throw r.error; }
-  } else if (a === "prejmenovat") {
+  if (a === "prejmenovat") {
     const nove = (prompt("Jméno a příjmení:", t.jmeno) || "").trim().replace(/\s+/g, " ");
     if (!nove || nove === t.jmeno) return;
     if (technici.some((x) => x.id !== t.id && norm(x.jmeno) === norm(nove))) { toast("Takový technik už existuje", true); return; }
@@ -2010,7 +2224,7 @@ async function akceTechnika(e) {
     return;
   } else if (a === "odebrat") {
     if (!confirm(`Odebrat ${t.jmeno} ze seznamu? Ve starých záznamech zůstane.`)) return;
-    const r = await sb.from("technici").update({ aktivni: false, ja: false }).eq("id", t.id);
+    const r = await sb.from("technici").update({ aktivni: false, ucet: null }).eq("id", t.id);
     if (r.error) throw r.error;
   } else if (a === "vratit") {
     const r = await sb.from("technici").update({ aktivni: true }).eq("id", t.id);
@@ -2020,6 +2234,92 @@ async function akceTechnika(e) {
 }
 $("#seznam-techniku").addEventListener("click", akce(akceTechnika));
 $("#seznam-odebranych").addEventListener("click", akce(akceTechnika));
+
+// --- nastavení: uživatelé (jen admin) ---
+function vykresliUzivatele() {
+  const el = $("#seznam-uzivatelu");
+  if (!profil || !jeAdmin()) { el.innerHTML = ""; return; }
+  const nabidka = aktivniTechnici();
+  el.innerHTML = profily.map((p) => {
+    const t = technici.find((x) => x.ucet === p.id);
+    return `<div class="uzivatel" data-id="${esc(p.id)}">
+      <div class="u-hlava">
+        <span class="u-email">${esc(p.email || p.id)}${p.id === uzivatel.id ? " (ty)" : ""}</span>
+        ${p.aktivni ? "" : `<span class="u-cek">čeká</span>`}
+        <input type="checkbox" class="prepinac" data-akce="aktivni" aria-label="Schválený"${p.aktivni ? " checked" : ""}>
+      </div>
+      <div class="u-volby">
+        <select data-akce="role" aria-label="Role">${Object.entries(ROLE_NAZEV).map(([v, n]) =>
+          `<option value="${v}"${p.role === v ? " selected" : ""}>${n}</option>`).join("")}</select>
+        <select data-akce="technik" aria-label="Technik"><option value="">bez technika</option>${nabidka.map((x) =>
+          `<option value="${esc(x.id)}"${t?.id === x.id ? " selected" : ""}${x.ucet && x.ucet !== p.id ? " disabled" : ""}>${esc(x.jmeno)}</option>`).join("")}</select>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+$("#seznam-uzivatelu").addEventListener("change", akce(async (e) => {
+  const el = e.target;
+  const p = profily.find((x) => x.id === el.closest(".uzivatel")?.dataset.id);
+  if (!p) return;
+  const ja = p.id === uzivatel.id;
+  const a = el.dataset.akce;
+  try {
+    if (a === "aktivni") {
+      if (ja && !el.checked) throw new Error("Vlastní účet nemůžeš zablokovat.");
+      const { error } = await sb.from("profily").update({ aktivni: el.checked }).eq("id", p.id);
+      if (error) throw error;
+      toast(el.checked ? "Účet schválen" : "Účet zablokován");
+    } else if (a === "role") {
+      if (ja && el.value !== "admin") throw new Error("Sám sobě roli admina neodebereš – udělej to z jiného admin účtu.");
+      const { error } = await sb.from("profily").update({ role: el.value }).eq("id", p.id);
+      if (error) throw error;
+      toast("Role změněna");
+    } else if (a === "technik") {
+      let r = await sb.from("technici").update({ ucet: null }).eq("ucet", p.id);
+      if (r.error) throw r.error;
+      if (el.value) {
+        r = await sb.from("technici").update({ ucet: p.id }).eq("id", el.value);
+        if (r.error) throw r.error;
+      }
+      toast("Propojeno");
+    }
+  } finally {
+    await nactiTechniky();
+    vykresliNastaveni();
+  }
+}));
+
+// --- můj účet: heslo a token zkratky ---
+$("#btn-heslo").addEventListener("click", akce(async () => {
+  const h1 = prompt("Nové heslo (aspoň 8 znaků):");
+  if (h1 == null) return;
+  if (h1.length < 8) throw new Error("Heslo musí mít aspoň 8 znaků.");
+  const h2 = prompt("Zopakuj nové heslo:");
+  if (h2 !== h1) throw new Error("Hesla se neshodují.");
+  const { error } = await sb.auth.updateUser({ password: h1 });
+  if (error) throw error;
+  toast("Heslo změněno");
+}));
+
+function tokenBase64Url(bajty) {
+  return btoa(String.fromCharCode(...bajty)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+async function sha256Hex(text) {
+  const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+$("#btn-token").addEventListener("click", akce(async () => {
+  if (!profil) throw new Error("Nejdřív spusť migraci migrace-ucty.sql.");
+  if (!confirm("Vytvořit nový token pro Siri zkratku? Předchozí osobní token přestane fungovat.")) return;
+  const token = tokenBase64Url(crypto.getRandomValues(new Uint8Array(30)));
+  const { error } = await sb.rpc("nastav_muj_token", { hash: await sha256Hex(token) });
+  if (error) throw error;
+  $("#token-text").textContent = token;
+  $("#token-box").classList.remove("skryto");
+  toast("Token vytvořen – zobrazí se jen teď");
+}));
+$("#btn-token-kopirovat").addEventListener("click", () => kopiruj($("#token-text").textContent, "Token zkopírován"));
 
 // ---------- rychlé servisní úkony ----------
 const ZAKLADNI_UKONY = ["Pájení", "Vakuování", "Tlaková zkouška dusíkem", "PC diagnostika",
