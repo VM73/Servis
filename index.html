@@ -354,7 +354,7 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
 }
 .rychle-ukony button.on { background: var(--orange); color: #fff; }
 .rychle-ukony button:active { opacity: .6; }
-.sheet.pausal .jen-hodinove, .sheet:not(.pausal) .jen-pausal { display: none !important; }
+.sheet.pausal:not(.s-hodinami) .jen-hodinove, .sheet.pausal .jen-material, .sheet:not(.pausal) .jen-pausal { display: none !important; }
 #pozn-pausal { color: var(--indigo); }
 .znacky .uct { color: var(--indigo); font-weight: 600; }
 .sheet.montaz .jen-servis, .sheet:not(.montaz) .jen-montaz { display: none; }
@@ -490,7 +490,7 @@ body.ne-admin .jen-admin { display: none !important; }
     <button class="velke-tlacitko" id="btn-prihlasit" type="submit">Přihlásit</button>
     <div class="chyba" id="p-chyba"></div>
   </form>
-  <div class="verze">verze 21 · hodiny po technicích</div>
+  <div class="verze">verze 22 · hodiny u montáže dle CN</div>
 </section>
 
 <!-- ============ ÚČET ČEKÁ NA SCHVÁLENÍ ============ -->
@@ -629,8 +629,8 @@ body.ne-admin .jen-admin { display: none !important; }
       <div class="pole svisle"><label for="f-ukony">Servisní úkony</label><textarea id="f-ukony" rows="1" placeholder="Pájení, vakuování, tlaková zkouška…"></textarea>
         <div class="rychle-ukony" id="rychle-ukony"></div>
       </div>
-      <div class="pole svisle jen-hodinove"><label for="f-material">Materiál</label><textarea id="f-material" rows="1" placeholder="Chladivo, filtry, izolace…"></textarea></div>
-      <div class="pole svisle jen-hodinove"><label for="f-dily">Náhradní díly</label><textarea id="f-dily" rows="1" placeholder="Kondenzátor, deska, ventilátor…"></textarea></div>
+      <div class="pole svisle jen-hodinove jen-material"><label for="f-material">Materiál</label><textarea id="f-material" rows="1" placeholder="Chladivo, filtry, izolace…"></textarea></div>
+      <div class="pole svisle jen-hodinove jen-material"><label for="f-dily">Náhradní díly</label><textarea id="f-dily" rows="1" placeholder="Kondenzátor, deska, ventilátor…"></textarea></div>
     </div>
 
     <div class="jen-vice">
@@ -1265,14 +1265,26 @@ function nastavUctovani(u) {
   u = u || "";
   $("#f-uctovani").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.v === u));
   $("#sheet").classList.toggle("pausal", !!u);
-  $("#pozn-pausal").textContent = u ? `Účtuje se ${MALE_UCTOVANI[u]} – hodiny, km, materiál ani díly není potřeba zadávat.` : "";
   if (aktualni) aktualni.uctovani = u || null;
+  aktualizujHodinyCN();
   if (jeVicedni?.()) prepoctiDny();
 }
 $("#f-uctovani").addEventListener("click", (e) => {
   const b = e.target.closest("button");
   if (b) nastavUctovani(b.dataset.v);
 });
+
+// montáž dle CN: hodiny a km se zapisují pro porovnání s nabídkou (materiál a díly ne)
+function hodinyUCN() { return $("#sheet").classList.contains("montaz") && aktualni?.uctovani === "cn"; }
+function bezHodin() { return !!aktualni?.uctovani && !hodinyUCN(); }
+function aktualizujHodinyCN() {
+  const u = aktualni?.uctovani;
+  const s = hodinyUCN();
+  $("#sheet").classList.toggle("s-hodinami", s);
+  $("#pozn-pausal").textContent = !u ? ""
+    : s ? "Účtuje se dle CN – hodiny a km zapiš pro porovnání s nabídkou, materiál ani díly není potřeba."
+    : `Účtuje se ${MALE_UCTOVANI[u]} – hodiny, km, materiál ani díly není potřeba zadávat.`;
+}
 
 function nastavTyp(typ) {
   const montaz = typ === "montaz";
@@ -1283,6 +1295,8 @@ function nastavTyp(typ) {
   $("#l-predmet").textContent = montaz ? "Co se udělalo" : "Předmět servisu / opravy";
   $("#f-predmet").placeholder = montaz ? "Osazení jednotek, potrubí, kabeláž…" : "Závada a provedená práce";
   if (aktualni) aktualni.typ = typ;
+  aktualizujHodinyCN();
+  if (jeVicedni?.()) prepoctiDny();
 }
 $("#f-typ").addEventListener("click", (e) => {
   const b = e.target.closest("button");
@@ -1565,9 +1579,9 @@ function prepoctiDny() {
   }
   const pocet = document.querySelectorAll("#f-dny .den-radek").length;
   $("#f-dny-celkem").textContent = chyba ? "neplatná hodnota"
-    : [`${pocet} ${pocet >= 2 && pocet <= 4 ? "dny" : "dní"}`, aktualni?.uctovani ? "" : `${fmtCislo(h)} h`,
-         aktualni?.uctovani || Math.abs(clh - h) < 0.001 ? "" : `${fmtCislo(clh)} h za partu`,
-         aktualni?.uctovani ? "" : `${fmtCislo(km)} km`].filter(Boolean).join(" · ");
+    : [`${pocet} ${pocet >= 2 && pocet <= 4 ? "dny" : "dní"}`, bezHodin() ? "" : `${fmtCislo(h)} h`,
+         bezHodin() || Math.abs(clh - h) < 0.001 ? "" : `${fmtCislo(clh)} h za partu`,
+         bezHodin() ? "" : `${fmtCislo(km)} km`].filter(Boolean).join(" · ");
 }
 
 $("#f-dny").addEventListener("input", (e) => {
