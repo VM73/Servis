@@ -335,6 +335,8 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
   background-position: right 4px center, right 0 center; background-size: 4px 4px; background-repeat: no-repeat;
 }
 .pilulka.vyber.on { background: var(--blue); color: #fff; }
+/* položky rozbalovacího seznamu (Windows) nesmí převzít bílý text aktivní pilulky */
+.pilulka.vyber select option { color: var(--label); background-color: var(--card); }
 .technik-radek { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 12px 0 16px; position: relative; }
 .technik-radek + .technik-radek::before, #seznam-techniku:not(:empty) + .pridat-technika::before {
   content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: .5px solid var(--sep);
@@ -490,7 +492,7 @@ body.ne-admin .jen-admin { display: none !important; }
     <button class="velke-tlacitko" id="btn-prihlasit" type="submit">Přihlásit</button>
     <div class="chyba" id="p-chyba"></div>
   </form>
-  <div class="verze">verze 23 · hodiny u montáže dle CN i smlouvy</div>
+  <div class="verze">verze 24 · oprava výběru technika na PC</div>
 </section>
 
 <!-- ============ ÚČET ČEKÁ NA SCHVÁLENÍ ============ -->
