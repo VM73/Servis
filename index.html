@@ -490,7 +490,7 @@ body.ne-admin .jen-admin { display: none !important; }
     <button class="velke-tlacitko" id="btn-prihlasit" type="submit">Přihlásit</button>
     <div class="chyba" id="p-chyba"></div>
   </form>
-  <div class="verze">verze 22 · hodiny u montáže dle CN</div>
+  <div class="verze">verze 23 · hodiny u montáže dle CN i smlouvy</div>
 </section>
 
 <!-- ============ ÚČET ČEKÁ NA SCHVÁLENÍ ============ -->
@@ -1274,15 +1274,15 @@ $("#f-uctovani").addEventListener("click", (e) => {
   if (b) nastavUctovani(b.dataset.v);
 });
 
-// montáž dle CN: hodiny a km se zapisují pro porovnání s nabídkou (materiál a díly ne)
-function hodinyUCN() { return $("#sheet").classList.contains("montaz") && aktualni?.uctovani === "cn"; }
+// montáž dle CN nebo smlouvy: hodiny a km se zapisují (materiál a díly ne)
+function hodinyUCN() { return $("#sheet").classList.contains("montaz") && !!aktualni?.uctovani; }
 function bezHodin() { return !!aktualni?.uctovani && !hodinyUCN(); }
 function aktualizujHodinyCN() {
   const u = aktualni?.uctovani;
   const s = hodinyUCN();
   $("#sheet").classList.toggle("s-hodinami", s);
   $("#pozn-pausal").textContent = !u ? ""
-    : s ? "Účtuje se dle CN – hodiny a km zapiš pro porovnání s nabídkou, materiál ani díly není potřeba."
+    : s ? `Účtuje se ${MALE_UCTOVANI[u]} – hodiny a km zapiš, materiál ani díly není potřeba.`
     : `Účtuje se ${MALE_UCTOVANI[u]} – hodiny, km, materiál ani díly není potřeba zadávat.`;
 }
 
