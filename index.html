@@ -588,7 +588,7 @@ body.ne-admin .jen-admin { display: none !important; }
     <button class="velke-tlacitko" id="btn-prihlasit" type="submit">Přihlásit</button>
     <div class="chyba" id="p-chyba"></div>
   </form>
-  <div class="verze">verze 28 · dny akce nemusejí navazovat</div>
+  <div class="verze">verze 29 · přidat den i v bloku Montáž/Zásah</div>
 </section>
 
 <!-- ============ ÚČET ČEKÁ NA SCHVÁLENÍ ============ -->
@@ -720,6 +720,7 @@ body.ne-admin .jen-admin { display: none !important; }
       <div class="pole"><label for="f-datum" id="l-datum">Datum</label><input id="f-datum" type="date"></div>
       <div class="pole"><label for="f-vicedni" style="width:auto">Více dní</label><input type="checkbox" class="prepinac" id="f-vicedni"></div>
       <div class="pole jen-vice"><label for="f-datum-do">Do</label><input id="f-datum-do" type="date"></div>
+      <div class="pole den-pridat"><label for="f-pridat-den2">+ Přidat den</label><input id="f-pridat-den2" type="date" aria-label="Přidat den"></div>
       <div class="pole"><label for="f-misto">Místo</label><input id="f-misto" placeholder="Obec, adresa" autocomplete="off"></div>
       <div class="pole"><label for="f-zakaznik">Zákazník</label><input id="f-zakaznik" placeholder="Jméno nebo firma" autocomplete="off"></div>
       <div class="pole"><label for="f-zarizeni">Zařízení</label><input id="f-zarizeni" placeholder="Výrobce, typ, s/n" autocomplete="off"></div>
@@ -1918,14 +1919,26 @@ $("#f-dny").addEventListener("click", (e) => {
   nastavDny(dnyAkce.filter((x) => x !== d));
   toast(`${fmtDatumDen(d)} odebrán`);
 });
-$("#f-pridat-den").addEventListener("change", (e) => {
+function pridejDenAkce(e) {
   const d = e.target.value;
   e.target.value = "";
   if (!d) return;
+  if (!jeVicedni()) {
+    // jednodenní záznam → vícedenní: stávající datum + nový den
+    const puvodni = $("#f-datum").value || dnes();
+    if (d === puvodni) { toast(`${fmtDatumDen(d)} už v záznamu je`, true); return; }
+    dnyAkce = [puvodni, d].sort();
+    $("#f-datum-do").value = dnyAkce[1];
+    nastavVicedni(true);
+    toast(`Přidán ${fmtDatumDen(d)} – záznam je teď vícedenní`);
+    return;
+  }
   if (dnyAkce.includes(d)) { toast(`${fmtDatumDen(d)} už v akci je`, true); return; }
   nastavDny([...dnyAkce, d]);
   toast(`Přidán ${fmtDatumDen(d)}`);
-});
+}
+$("#f-pridat-den").addEventListener("change", pridejDenAkce);
+$("#f-pridat-den2").addEventListener("change", pridejDenAkce);
 
 // ostatní dny stejné skupiny (vícedenní zadání)
 function sourozenci(z) {
