@@ -549,6 +549,23 @@ body.ne-admin .jen-admin { display: none !important; }
 .vy-bod.m { background: var(--indigo); } .vy-bod.s { background: var(--orange); }
 .vy-pod { font-size: 14px; color: var(--label2); margin-top: 7px; } .vy-pod b { color: var(--label); }
 .vy-kap { font-size: 12px; color: var(--label2); margin-top: 14px; padding-top: 10px; border-top: .5px solid var(--sep); }
+
+@media (min-width: 1400px) {
+  .kalendar { display: flex; flex-direction: column; padding-bottom: 14px; }
+  .kal-mriz { flex: 1 1 auto; min-height: 0; }
+  .kal-den { min-height: 0; overflow: hidden; }
+  .kal-akce, .kal-cislo, .kal-vic { flex: none; }
+  .kal-pozn { display: none; }
+  .vytizeni { flex: none; margin-top: 12px; padding: 10px 16px; }
+  .vy-blok + .vy-blok { margin-top: 10px; padding-top: 10px; }
+  .vy-hl { margin-bottom: 5px; }
+  .vy-pruh { height: 16px; border-radius: 5px; }
+  .vy-pod { margin-top: 4px; font-size: 13px; }
+  .vy-kap { margin-top: 8px; padding-top: 6px; }
+  .vytizeni { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; }
+  .vy-blok + .vy-blok { margin-top: 0; padding-top: 0; border-top: 0; }
+  .vy-kap { grid-column: 1 / -1; }
+}
 </style>
 </head>
 <body>
@@ -567,7 +584,7 @@ body.ne-admin .jen-admin { display: none !important; }
     <button class="velke-tlacitko" id="btn-prihlasit" type="submit">Přihlásit</button>
     <div class="chyba" id="p-chyba"></div>
   </form>
-  <div class="verze">verze 26 · vytížení měsíce pod kalendářem</div>
+  <div class="verze">verze 27 · kalendář podle výšky okna</div>
 </section>
 
 <!-- ============ ÚČET ČEKÁ NA SCHVÁLENÍ ============ -->
@@ -1409,7 +1426,7 @@ function vykresliKalendar(vysledek = filtruj()) {
   el.innerHTML = `<div class="kal-hl"><h2>${esc(nazev.charAt(0).toUpperCase() + nazev.slice(1))}</h2>
       <div class="kal-nav"><button data-kal="-1" aria-label="Předchozí měsíc">‹</button><button data-kal="0">Dnes</button><button data-kal="1" aria-label="Další měsíc">›</button></div></div>
     <div class="kal-legenda"><span><i style="background:var(--indigo)"></i>Montáž</span><span><i style="background:var(--orange)"></i>Servis</span></div>
-    <div class="kal-mriz">${["Po", "Út", "St", "Čt", "Pá", "So", "Ne"].map((x) => `<div class="kal-dt">${x}</div>`).join("")}${bunky}</div>
+    <div class="kal-mriz" style="grid-template-rows: auto repeat(${tydnu}, minmax(48px, 1fr))">${["Po", "Út", "St", "Čt", "Pá", "So", "Ne"].map((x) => `<div class="kal-dt">${x}</div>`).join("")}${bunky}</div>
     ${vytizeniMesice(vysledek, kalMesic)}
     <div class="kal-pozn">Kalendář ukazuje záznamy podle filtrů vlevo. Klepnutím na den přeskočíš v seznamu na jeho záznamy.</div>`;
 }
