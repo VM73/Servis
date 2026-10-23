@@ -390,6 +390,10 @@ audio { width: calc(100% - 32px); margin: 0 16px 12px; display: block; }
 }
 .den-radek input.km { width: 70px; }
 .den-radek .jednotka { color: var(--label2); width: 22px; }
+.den-x { flex: none; width: 28px; height: 28px; border-radius: 50%; color: var(--label2); font-size: 20px; line-height: 1; display: grid; place-items: center; margin-right: -6px; }
+.den-x:hover, .den-x:active { background: var(--fill2); color: var(--red); }
+.den-pridat label { color: var(--blue); width: auto; flex: 1; }
+.den-pridat input[type="date"] { flex: none; width: auto; text-align: right; color: var(--label2); }
 .navrhy { border-top: .5px solid var(--sep); border-bottom: .5px solid var(--sep); margin: 0 0 0 16px; background: var(--fill); border-radius: 0; }
 .navrhy + .pole::before { display: none; }
 .navrhy button {
@@ -584,7 +588,7 @@ body.ne-admin .jen-admin { display: none !important; }
     <button class="velke-tlacitko" id="btn-prihlasit" type="submit">Přihlásit</button>
     <div class="chyba" id="p-chyba"></div>
   </form>
-  <div class="verze">verze 27 · kalendář podle výšky okna</div>
+  <div class="verze">verze 28 · dny akce nemusejí navazovat</div>
 </section>
 
 <!-- ============ ÚČET ČEKÁ NA SCHVÁLENÍ ============ -->
@@ -741,9 +745,10 @@ body.ne-admin .jen-admin { display: none !important; }
       <div class="sekce-hlavicka">Dny</div>
       <div class="form-skupina">
         <div id="f-dny"></div>
+        <div class="pole den-pridat"><label for="f-pridat-den">+ Přidat den</label><input id="f-pridat-den" type="date" aria-label="Přidat den"></div>
         <div class="pole den-celkem"><label>Celkem</label><span class="hodnota" id="f-dny-celkem">–</span></div>
       </div>
-      <div class="form-pozn jen-hodinove">Hodiny a km pro každý den zvlášť. Km z prvního dne se předvyplní do dalších. Pod technikem dne vyplň hodiny jen tomu, kdo byl jinou dobu.</div>
+      <div class="form-pozn jen-hodinove">Den, kdy se na akci nepracovalo, odebereš křížkem ×. Pozdější den (dodělávka, zprovoznění) přidáš přes + Přidat den. Hodiny a km pro každý den zvlášť. Km z prvního dne se předvyplní do dalších. Pod technikem dne vyplň hodiny jen tomu, kdo byl jinou dobu.</div>
     </div>
 
     <div class="sekce-hlavicka jen-hodinove" id="h-cas">Čas</div>
@@ -1718,6 +1723,7 @@ $("#exp-predmet").addEventListener("click", akce(async () => {
 // ---------- vícedenní zadání ----------
 const DNY_TYDNE = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 let hodnotyDnu = new Map();   // datum → { prace: "8", km: "96" } (texty z polí)
+let dnyAkce = [];             // dny vícedenní akce – nemusejí jít po sobě
 
 function pridejDen(iso, n) {
   const [y, m, d] = iso.split("-").map(Number);
@@ -1737,8 +1743,24 @@ function nazevDne(iso) {
 }
 function jeVicedni() { return $("#f-vicedni").checked; }
 
+// nastaví seznam dnů akce; Od / Do ukazují první a poslední den
+function nastavDny(seznam) {
+  dnyAkce = [...new Set(seznam.filter(Boolean))].sort();
+  if (dnyAkce.length) { $("#f-datum").value = dnyAkce[0]; $("#f-datum-do").value = dnyAkce[dnyAkce.length - 1]; }
+  vykresliDny();
+}
+// změna Od / Do: dny mimo rozsah ubrat, nově pokryté dny přidat, mezery uvnitř zůstanou
+function zmenaRozsahu() {
+  const od = $("#f-datum").value, doo = $("#f-datum-do").value;
+  if (!od || !doo) return;
+  const pOd = dnyAkce[0], pDo = dnyAkce[dnyAkce.length - 1];
+  const nech = dnyAkce.filter((d) => d >= od && d <= doo);
+  const nove = datumyRozsah(od, doo).filter((d) => !pOd || d < pOd || d > pDo);
+  nastavDny([...nech, ...nove]);
+}
+
 function vykresliDny() {
-  const datumy = datumyRozsah($("#f-datum").value, $("#f-datum-do").value);
+  const datumy = dnyAkce;
   $("#f-dny").innerHTML = datumy.map((d) => {
     const h = hodnotyDnu.get(d) || {};
     if (!Array.isArray(h.technici)) { h.technici = [...(aktualni?.technici || [])]; hodnotyDnu.set(d, h); }
@@ -1746,11 +1768,12 @@ function vykresliDny() {
       <span class="den-nazev">${nazevDne(d)}</span>
       <input class="hod jen-hodinove" inputmode="decimal" placeholder="0" value="${esc(h.prace ?? "")}" aria-label="Hodiny"><span class="jednotka jen-hodinove">h</span>
       <input class="km jen-hodinove" inputmode="decimal" placeholder="0" value="${esc(h.km ?? "")}" aria-label="Kilometry"><span class="jednotka jen-hodinove">km</span>
+      <button type="button" class="den-x" aria-label="Odebrat den" title="Odebrat den">×</button>
     </div>
     <div class="den-technici" data-datum="${d}">${technikyDneHtml(d)}</div>
     <div class="den-hodiny jen-hodinove" data-datum="${d}">${hodinyDneHtml(d)}</div>`;
   }).join("");
-  if (datumy.length >= 31) toast("Rozsah je omezený na 31 dní", true);
+  if (datumy.length > 31) toast("Akce má víc než 31 dní – zkontroluj rozsah", true);
   if (aktualni) { aktualizujSpolecneTechniky(); vykresliVyberTechniku(); }
   prepoctiDny();
 }
@@ -1869,7 +1892,8 @@ function nastavVicedni(zapnout) {
     if (!hodnotyDnu.has(od) && ($("#f-prace").value || $("#f-km").value || Object.values(aktualni?.hodTech || {}).some(Boolean))) {
       hodnotyDnu.set(od, { prace: $("#f-prace").value, km: $("#f-km").value, hodTech: { ...(aktualni?.hodTech || {}) } });
     }
-    vykresliDny();
+    if (dnyAkce.length < 2) dnyAkce = datumyRozsah(od, $("#f-datum-do").value);
+    nastavDny(dnyAkce);
   } else {
     const od = $("#f-datum").value;
     const h = hodnotyDnu.get(od);
@@ -1880,9 +1904,28 @@ $("#f-vicedni").addEventListener("change", (e) => nastavVicedni(e.target.checked
 ["#f-datum", "#f-datum-do"].forEach((s) => $(s).addEventListener("change", () => {
   if (jeVicedni()) {
     if ($("#f-datum-do").value && $("#f-datum-do").value < $("#f-datum").value) $("#f-datum-do").value = $("#f-datum").value;
-    vykresliDny();
+    zmenaRozsahu();
   }
 }));
+
+// odebrání dne (×) a přidání libovolného dne
+$("#f-dny").addEventListener("click", (e) => {
+  const x = e.target.closest(".den-x");
+  if (!x) return;
+  e.stopPropagation();
+  const d = x.closest(".den-radek").dataset.datum;
+  if (dnyAkce.length <= 2) { toast("Vícedenní akce musí mít aspoň 2 dny – jinak vypni Více dní", true); return; }
+  nastavDny(dnyAkce.filter((x) => x !== d));
+  toast(`${fmtDatumDen(d)} odebrán`);
+});
+$("#f-pridat-den").addEventListener("change", (e) => {
+  const d = e.target.value;
+  e.target.value = "";
+  if (!d) return;
+  if (dnyAkce.includes(d)) { toast(`${fmtDatumDen(d)} už v akci je`, true); return; }
+  nastavDny([...dnyAkce, d]);
+  toast(`Přidán ${fmtDatumDen(d)}`);
+});
 
 // ostatní dny stejné skupiny (vícedenní zadání)
 function sourozenci(z) {
@@ -1902,6 +1945,7 @@ function otevri(z) {
         skupinaIds: skupina.length > 1 ? skupina.map((s) => s.id) : [zaklad.id] };
   zmeneno = false;
   hodnotyDnu = new Map();
+  dnyAkce = [];
 
   nastavTyp(aktualni.typ);
   nastavUctovani(aktualni.uctovani);
@@ -1933,6 +1977,7 @@ function otevri(z) {
       });
     }
     $("#f-datum-do").value = skupina[skupina.length - 1].datum_zasahu;
+    dnyAkce = skupina.map((s) => s.datum_zasahu);
     nastavVicedni(true);
   } else {
     $("#f-datum-do").value = "";
