@@ -474,6 +474,81 @@ body.ne-admin .jen-admin { display: none !important; }
 }
 .token-box { padding: 10px 16px 12px; }
 .token-box code { display: block; font: 15px/1.4 ui-monospace, Menlo, monospace; word-break: break-all; background: var(--fill); border-radius: 8px; padding: 8px 10px; -webkit-user-select: all; user-select: all; }
+
+/* ---------- rozložení: mobil = jeden sloupec, PC = panel vlevo (+ kalendář) ---------- */
+.levy { display: contents; }
+.panel { padding-bottom: 0; }
+.btn-novy-velky, .kalendar { display: none; }
+@media (min-width: 900px) {
+  .plocha { display: grid; grid-template-columns: 320px minmax(0, 1fr); height: 100vh; height: 100dvh; }
+  .levy { display: block; overflow-y: auto; border-right: .5px solid var(--sep); }
+  .levy .nav { position: static; background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; border-bottom: 0; padding: 0 18px; }
+  .levy .nav-titul, #btn-novy { display: none; }
+  .panel { padding: 0 18px 24px; max-width: none; margin: 0; }
+  .panel .velky-titul { margin-bottom: 14px; }
+  .btn-novy-velky {
+    display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 46px; margin-bottom: 16px;
+    border-radius: 12px; background: var(--blue); color: #fff; font-size: 17px; font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0, 122, 255, .25);
+  }
+  .btn-novy-velky svg { width: 20px; height: 20px; }
+  .btn-novy-velky:active { opacity: .7; }
+  .panel .souhrn { grid-template-columns: 1fr 1fr; }
+  .panel .souhrn div:nth-child(3) { border-left: 0; }
+  .panel .souhrn div:nth-child(n+3) { border-top: .5px solid var(--sep); }
+  #hlavni { overflow-y: auto; max-width: none; margin: 0; padding: 0 28px 40px; }
+  #seznam { max-width: 820px; }
+  .bunka { cursor: pointer; }
+  .bunka.blik { animation: blik 1.6s ease-out; }
+}
+@keyframes blik { 0%, 40% { background: rgba(0, 122, 255, .18); } 100% { background: transparent; } }
+@media (min-width: 1400px) {
+  .plocha { grid-template-columns: 320px minmax(420px, 580px) minmax(0, 1fr); }
+  #hlavni { padding: 0 16px 40px; }
+  .kalendar { display: block; overflow-y: auto; padding: 14px 24px 30px; border-left: .5px solid var(--sep); }
+}
+.kal-hl { display: flex; align-items: center; justify-content: space-between; height: 44px; }
+.kal-hl h2 { font-size: 22px; font-weight: 700; margin: 0; }
+.kal-nav { display: flex; align-items: center; gap: 4px; }
+.kal-nav button { color: var(--blue); font-size: 17px; padding: 6px 10px; border-radius: 8px; }
+.kal-nav button:hover { background: var(--fill); }
+.kal-legenda { display: flex; gap: 14px; font-size: 13px; color: var(--label2); margin: 2px 0 10px; }
+.kal-legenda i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.kal-mriz { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)) repeat(2, minmax(0, .55fr)); gap: 4px; }
+.kal-dt { font-size: 12px; font-weight: 600; color: var(--label2); text-align: center; padding-bottom: 2px; }
+.kal-den {
+  background: var(--card); border-radius: 8px; min-height: 104px; padding: 5px 6px; text-align: left;
+  display: flex; flex-direction: column; gap: 3px; align-items: stretch; justify-content: flex-start; min-width: 0;
+}
+.kal-den:hover, .kal-den.najeto { box-shadow: inset 0 0 0 1.5px var(--label3); }
+.kal-den.vikend { background: var(--fill); }
+.kal-den.mimo { opacity: .4; }
+.kal-den.dnes { box-shadow: inset 0 0 0 2px var(--blue); }
+.kal-den.vybrany { background: rgba(0, 122, 255, .12); }
+.kal-cislo { font-size: 13px; font-weight: 600; }
+.kal-den.dnes .kal-cislo { color: var(--blue); }
+.kal-akce {
+  font-size: 11.5px; line-height: 1.25; padding: 2px 5px; border-radius: 4px; border-left: 3px solid;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.kal-akce.m { background: rgba(88, 86, 214, .14); border-color: var(--indigo); }
+.kal-akce.s { background: rgba(255, 149, 0, .16); border-color: var(--orange); }
+.kal-vic { font-size: 11.5px; color: var(--label2); padding-left: 4px; }
+.kal-pozn { font-size: 13px; color: var(--label2); margin-top: 10px; }
+.vytizeni { background: var(--card); border-radius: 12px; padding: 14px 16px 12px; margin-top: 16px; }
+.vy-blok + .vy-blok { margin-top: 16px; padding-top: 14px; border-top: .5px solid var(--sep); }
+.vy-hl { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.vy-hl h3 { margin: 0; font-size: 13px; font-weight: 600; color: var(--label2); text-transform: uppercase; letter-spacing: .2px; }
+.vy-hl span { font-size: 13px; color: var(--label2); }
+.vy-hl b { color: var(--label); font-size: 15px; }
+.vy-pruh { display: flex; height: 26px; border-radius: 6px; background: var(--fill); overflow: hidden; }
+.vy-pruh i { display: block; height: 100%; }
+.vy-pruh .m { background: var(--indigo); } .vy-pruh .s { background: var(--orange); }
+.vy-hl h3 { display: flex; align-items: center; gap: 7px; }
+.vy-bod { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.vy-bod.m { background: var(--indigo); } .vy-bod.s { background: var(--orange); }
+.vy-pod { font-size: 14px; color: var(--label2); margin-top: 7px; } .vy-pod b { color: var(--label); }
+.vy-kap { font-size: 12px; color: var(--label2); margin-top: 14px; padding-top: 10px; border-top: .5px solid var(--sep); }
 </style>
 </head>
 <body>
@@ -492,7 +567,7 @@ body.ne-admin .jen-admin { display: none !important; }
     <button class="velke-tlacitko" id="btn-prihlasit" type="submit">Přihlásit</button>
     <div class="chyba" id="p-chyba"></div>
   </form>
-  <div class="verze">verze 24 · oprava výběru technika na PC</div>
+  <div class="verze">verze 26 · vytížení měsíce pod kalendářem</div>
 </section>
 
 <!-- ============ ÚČET ČEKÁ NA SCHVÁLENÍ ============ -->
@@ -511,6 +586,8 @@ body.ne-admin .jen-admin { display: none !important; }
 
 <!-- ============ SEZNAM ============ -->
 <section id="aplikace" class="skryto">
+ <div class="plocha">
+ <div class="levy">
   <header class="nav" id="nav">
     <div class="nav-radek">
       <button class="nav-btn" id="btn-nastaveni">Nastavení</button>
@@ -526,8 +603,11 @@ body.ne-admin .jen-admin { display: none !important; }
     </div>
   </header>
 
-  <main class="obsah">
+  <div class="obsah panel">
     <h1 class="velky-titul" id="velky-titul">Záznamy</h1>
+    <button class="btn-novy-velky" id="btn-novy-velky">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Nový záznam
+    </button>
 
     <div class="hledani">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 20 20"/></svg>
@@ -582,8 +662,13 @@ body.ne-admin .jen-admin { display: none !important; }
       <div><small>Km</small><b id="s-km">0</b></div>
     </div>
 
+  </div>
+ </div>
+  <main class="obsah" id="hlavni">
     <div id="seznam"><div class="stred"><span class="nacitani"></span></div></div>
   </main>
+  <aside class="kalendar" id="kalendar" aria-label="Kalendář záznamů"></aside>
+ </div>
 </section>
 
 <!-- ============ DETAIL / ÚPRAVA ============ -->
@@ -1111,8 +1196,22 @@ function filtruj() {
   });
 }
 
+function nazevZaznamu(z) {
+  return z.typ === "montaz"
+    ? [z.akce, z.akce && z.misto && norm(z.akce).includes(norm(z.misto)) ? "" : z.misto]
+        .filter(Boolean).join(" · ") || "Montáž bez názvu"
+    : [z.zakaznik, z.misto].filter(Boolean).join(" · ") || "Bez zákazníka";
+}
+// "Čt 22. 10."
+function fmtDatumDen(d) {
+  if (!d) return "";
+  const [y, m, den] = d.split("-").map(Number);
+  return `${DNY_TYDNE[new Date(y, m - 1, den).getDay()]} ${fmtDatum(d)}`;
+}
+
 function vykresli() {
   const vysledek = filtruj();
+  vykresliKalendar(vysledek);
 
   let prace = 0, cesta = 0, km = 0, clh = 0;
   let vlastni = 0;
@@ -1165,10 +1264,7 @@ function vykresli() {
     html += `<div class="sekce-hlavicka">${esc(nazevMesice(k))}</div><div class="skupina">`;
     for (const z of polozky) {
       const montaz = z.typ === "montaz";
-      const nazev = montaz
-        ? [z.akce, z.akce && z.misto && norm(z.akce).includes(norm(z.misto)) ? "" : z.misto]
-            .filter(Boolean).join(" · ") || "Montáž bez názvu"
-        : [z.zakaznik, z.misto].filter(Boolean).join(" · ") || "Bez zákazníka";
+      const nazev = nazevZaznamu(z);
       const cestaZ = (Number(z.cesta_tam_hod) || 0) + (Number(z.cesta_zpet_hod) || 0);
       const znacky = [];
       if (z.ke_kontrole) znacky.push(`<span class="varovani">${IKONY.pozor}Ke kontrole</span>`);
@@ -1182,9 +1278,9 @@ function vykresli() {
       if (z.cesta_km != null) znacky.push(`<span>${montaz || !cestaZ ? IKONY.auto : ""}${fmtCislo(Number(z.cesta_km))} km</span>`);
       if (z.fotky.length) znacky.push(`<span>${IKONY.foto}${z.fotky.length}</span>`);
       const popis = z.predmet || (!z.zakaznik && !z.misto && !z.akce ? z.prepis : "");
-      html += `<button class="bunka" data-id="${esc(z.id)}">
+      html += `<button class="bunka" data-id="${esc(z.id)}" data-datum="${esc(z.datum_zasahu || "")}">
         <div class="bunka-telo">
-          <div class="bunka-r1"><span class="bunka-nazev">${montaz ? '<span class="stitek">Montáž</span>' : '<span class="stitek servis">Servis</span>'}${esc(nazev)}</span><span class="bunka-datum">${esc(fmtDatum(z.datum_zasahu))}</span></div>
+          <div class="bunka-r1"><span class="bunka-nazev">${montaz ? '<span class="stitek">Montáž</span>' : '<span class="stitek servis">Servis</span>'}${esc(nazev)}</span><span class="bunka-datum">${esc(fmtDatumDen(z.datum_zasahu))}</span></div>
           ${z.zarizeni ? `<div class="bunka-r2">${esc(z.zarizeni)}</div>` : ""}
           ${popis ? `<div class="bunka-r3">${esc(popis)}</div>` : ""}
           ${znacky.length ? `<div class="znacky">${znacky.join("")}</div>` : ""}
@@ -1228,6 +1324,127 @@ function segment(id, klic) {
 segment("#seg-typ", "typ");
 segment("#seg-rozsah", "rozsah");
 segment("#seg-obdobi", "obdobi");
+
+
+// ---------- kalendář (jen široký monitor) ----------
+const sirokyMonitor = matchMedia("(min-width: 1400px)");
+let kalMesic = null;    // "YYYY-MM"
+let kalVybrany = null;  // vybraný den "YYYY-MM-DD"
+function posunMesic(klic, n) {
+  const [y, m] = klic.split("-").map(Number);
+  const d = new Date(y, m - 1 + n, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+// státní svátky ČR (pevné + Velký pátek a Velikonoční pondělí)
+function svatkyCR(rok) {
+  const pevne = ["01-01", "05-01", "05-08", "07-05", "07-06", "09-28", "10-28", "11-17", "12-24", "12-25", "12-26"].map((x) => `${rok}-${x}`);
+  const a = rok % 19, b = Math.floor(rok / 100), c = rok % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25),
+    g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4,
+    l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451),
+    mes = Math.floor((h + l - 7 * m + 114) / 31), den = ((h + l - 7 * m + 114) % 31) + 1;
+  const nedele = new Date(rok, mes - 1, den);
+  const posun = (n) => iso(new Date(nedele.getFullYear(), nedele.getMonth(), nedele.getDate() + n));
+  return new Set([...pevne, posun(-2), posun(1)]);
+}
+function pracovniDny(mesic) {
+  const [y, m] = mesic.split("-").map(Number);
+  const sv = svatkyCR(y), out = [];
+  for (let d = 1; d <= new Date(y, m, 0).getDate(); d++) {
+    const dt = new Date(y, m - 1, d);
+    if (dt.getDay() % 6 && !sv.has(iso(dt))) out.push(iso(dt));
+  }
+  return out;
+}
+const HODIN_DEN = 8;
+function vytizeniMesice(vysledek, mesic) {
+  const v = vysledek.filter((z) => (z.datum_zasahu || "").startsWith(mesic));
+  const dny = pracovniDny(mesic);
+  const pocetTech = stav.technik ? 1 : Math.max(1, aktivniTechnici().length);
+  const kapacita = dny.length * HODIN_DEN * pocetTech;
+  const mz = v.filter((z) => z.typ === "montaz"), sz = v.filter((z) => z.typ !== "montaz");
+  const hod = (zz) => zz.reduce((a, z) => a + (stav.technik ? hodinyTechnika(z, stav.technik) : clovekohodinyZ(z)), 0);
+  const hm = hod(mz), hs = hod(sz);
+  const akci = new Set(mz.map((z) => z.skupina || z.id)).size;
+  const dnyM = new Set(mz.map((z) => z.datum_zasahu)), dnyS = new Set(sz.map((z) => z.datum_zasahu));
+  const obsazene = dny.filter((d) => dnyM.has(d) || dnyS.has(d)).length;
+  const pct = (x) => kapacita ? Math.min(100, (x / kapacita) * 100) : 0;
+  const tvar = (n, a, b, c) => n === 1 ? a : n >= 2 && n <= 4 ? b : c;
+  const radek = (titul, tr, h, popis) => `<div class="vy-blok">
+      <div class="vy-hl"><h3><i class="vy-bod ${tr}"></i>${titul}</h3><span><b>${fmtCislo(h)} h</b> z ${fmtCislo(kapacita)} h · ${Math.round(pct(h))} %</span></div>
+      <div class="vy-pruh"><i class="${tr}" style="width:${pct(h)}%"></i></div>
+      <div class="vy-pod">${popis}</div>
+    </div>`;
+  return `<div class="vytizeni">
+    ${radek("Montáže", "m", hm, `<b>${akci}</b> ${tvar(akci, "akce", "akce", "akcí")} · ${dnyM.size} ${tvar(dnyM.size, "den", "dny", "dní")}`)}
+    ${radek("Servisy", "s", hs, `<b>${sz.length}</b> ${tvar(sz.length, "servis", "servisy", "servisů")} · ${dnyS.size} ${tvar(dnyS.size, "den", "dny", "dní")}`)}
+    <div class="vy-kap">Kapacita ${fmtCislo(kapacita)} h = ${dny.length} prac. dní × ${HODIN_DEN} h × ${pocetTech} ${tvar(pocetTech, "technik", "technici", "techniků")} · s prací ${obsazene} z ${dny.length} dní</div>
+  </div>`;
+}
+function vykresliKalendar(vysledek = filtruj()) {
+  const el = $("#kalendar");
+  if (!sirokyMonitor.matches) { el.innerHTML = ""; return; }
+  if (!kalMesic) kalMesic = dnes().slice(0, 7);
+  const [y, m] = kalMesic.split("-").map(Number);
+  const posun = (new Date(y, m - 1, 1).getDay() + 6) % 7;      // pondělí = 0
+  const tydnu = Math.ceil((posun + new Date(y, m, 0).getDate()) / 7);
+  const poDnech = new Map();
+  for (const z of vysledek) {
+    if (!z.datum_zasahu) continue;
+    (poDnech.get(z.datum_zasahu) || poDnech.set(z.datum_zasahu, []).get(z.datum_zasahu)).push(z);
+  }
+  const dnesek = dnes();
+  let bunky = "";
+  for (let i = 0; i < tydnu * 7; i++) {
+    const d = new Date(y, m - 1, 1 - posun + i);
+    const datum = iso(d);
+    const zaz = (poDnech.get(datum) || []).slice().sort((a, b) => (a.typ === "montaz" ? 0 : 1) - (b.typ === "montaz" ? 0 : 1));
+    const tridy = ["kal-den", i % 7 >= 5 ? "vikend" : "", d.getMonth() !== m - 1 ? "mimo" : "",
+      datum === dnesek ? "dnes" : "", datum === kalVybrany ? "vybrany" : ""].filter(Boolean).join(" ");
+    const akce = zaz.slice(0, 4).map((z) => `<span class="kal-akce ${z.typ === "montaz" ? "m" : "s"}" title="${esc(nazevZaznamu(z))}">${esc(nazevZaznamu(z))}</span>`).join("");
+    bunky += `<button class="${tridy}" data-datum="${datum}"${zaz.length ? ` title="${zaz.length} ${zaz.length === 1 ? "záznam" : zaz.length <= 4 ? "záznamy" : "záznamů"}"` : ""}>
+      <span class="kal-cislo">${d.getDate()}</span>${akce}${zaz.length > 4 ? `<span class="kal-vic">+${zaz.length - 4}</span>` : ""}</button>`;
+  }
+  const nazev = nazevMesice(kalMesic);
+  el.innerHTML = `<div class="kal-hl"><h2>${esc(nazev.charAt(0).toUpperCase() + nazev.slice(1))}</h2>
+      <div class="kal-nav"><button data-kal="-1" aria-label="Předchozí měsíc">‹</button><button data-kal="0">Dnes</button><button data-kal="1" aria-label="Další měsíc">›</button></div></div>
+    <div class="kal-legenda"><span><i style="background:var(--indigo)"></i>Montáž</span><span><i style="background:var(--orange)"></i>Servis</span></div>
+    <div class="kal-mriz">${["Po", "Út", "St", "Čt", "Pá", "So", "Ne"].map((x) => `<div class="kal-dt">${x}</div>`).join("")}${bunky}</div>
+    ${vytizeniMesice(vysledek, kalMesic)}
+    <div class="kal-pozn">Kalendář ukazuje záznamy podle filtrů vlevo. Klepnutím na den přeskočíš v seznamu na jeho záznamy.</div>`;
+}
+$("#kalendar").addEventListener("click", (e) => {
+  const nav = e.target.closest("[data-kal]");
+  if (nav) {
+    kalMesic = nav.dataset.kal === "0" ? dnes().slice(0, 7) : posunMesic(kalMesic, Number(nav.dataset.kal));
+    vykresliKalendar();
+    return;
+  }
+  const den = e.target.closest(".kal-den");
+  if (!den) return;
+  kalVybrany = den.dataset.datum;
+  vykresliKalendar();
+  const bunky = [...document.querySelectorAll(`#seznam .bunka[data-datum="${kalVybrany}"]`)];
+  if (!bunky.length) { toast(`${fmtDatumDen(kalVybrany)} – žádný záznam`); return; }
+  bunky[0].scrollIntoView({ behavior: "smooth", block: "start" });
+  bunky.forEach((b) => { b.classList.remove("blik"); void b.offsetWidth; b.classList.add("blik"); });
+});
+// najetí myší na záznam v seznamu zvýrazní jeho den v kalendáři
+$("#seznam").addEventListener("mouseover", (e) => {
+  const b = e.target.closest(".bunka");
+  document.querySelectorAll(".kal-den.najeto").forEach((x) => x.classList.remove("najeto"));
+  if (b) document.querySelector(`.kal-den[data-datum="${b.dataset.datum}"]`)?.classList.add("najeto");
+});
+$("#seznam").addEventListener("mouseleave", () => document.querySelectorAll(".kal-den.najeto").forEach((x) => x.classList.remove("najeto")));
+// filtr období přepne i měsíc v kalendáři
+$("#seg-obdobi").addEventListener("click", (e) => {
+  const v = e.target.closest("button")?.dataset.v;
+  if (v === "mesic") kalMesic = dnes().slice(0, 7);
+  else if (v === "minuly") kalMesic = posunMesic(dnes().slice(0, 7), -1);
+  else return;
+  vykresliKalendar();
+});
+sirokyMonitor.addEventListener?.("change", () => vykresliKalendar());
 
 $("#f-kontrola-pil").addEventListener("click", (e) => {
   stav.kontrola = !stav.kontrola;
@@ -1901,6 +2118,7 @@ async function ulozit({ zavrit = true } = {}) {
 }
 
 $("#btn-novy").addEventListener("click", () => otevri(null));
+$("#btn-novy-velky").addEventListener("click", () => otevri(null));
 $("#btn-zrusit").addEventListener("click", zavri);
 $("#btn-ulozit").addEventListener("click", akce(async () => {
   const b = $("#btn-ulozit");
