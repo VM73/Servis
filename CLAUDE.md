@@ -42,10 +42,9 @@ Mobilní PWA pro HVAC techniky: záznamy ze servisních výjezdů a montáží, 
 ## Supabase v repu
 - `supabase/schema.sql` + `supabase/functions/{servis,klima,kucharka}/` – snímek celého sdíleného projektu (2026-11-14), postup změn v `supabase/README.md`.
 - Změny DB jen novou migrací v `supabase/migrations/`, funkce nejdřív v repu, pak nasadit.
+- Přístupy v Edge Functions (od 2026-11-14): `servis` zápis záznamu a cesty zpět jen s `'servis'` v `profily.aplikace`, přepis pole se `servis` nebo `klima`; `klima` jen schválený účet s `klima` (`klima_smi()`). Verify JWT zůstává vypnuté – funkce ověřují samy.
 
 ## Otevřené otázky
-- Edge Function `servis` (akce `zaznam`, `cesta-zpet`) pouští každý aktivní účet – nekontroluje `'servis' = any(aplikace)`. Uživatel jen s `klima` by přes JWT mohl vložit servisní záznam (funkce zapisuje service_role, mimo RLS). Akci `prepis` používá i Klima – tam je to záměr.
-- Edge Function `klima` ověřuje jen přihlášení (ne `aktivni` ani `klima`) – každý registrovaný účet může volat OpenAI.
 - Kuchařka používá vlastní tabulku `clenove` (`je_clen()`), funkce `kucharka_smi()` podle `profily.aplikace` se zatím nikde nepoužívá – rozhodnout, který systém platí.
 - README je prázdné – doplnit odkaz na appku a popis.
 

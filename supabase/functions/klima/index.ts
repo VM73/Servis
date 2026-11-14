@@ -42,6 +42,12 @@ Deno.serve(async (req) => {
   });
   const { data: u, error: chybaU } = await sb.auth.getUser(token);
   if (chybaU || !u?.user) return odpoved({ chyba: "Neplatné přihlášení" }, 401);
+  // jen schválený účet s přístupem do Klimy (stejná podmínka jako RLS tabulek klima_*)
+  const { data: smi, error: chybaSmi } = await sb.rpc("klima_smi");
+  if (chybaSmi || smi !== true) {
+    console.log("odmítnuto – bez přístupu do Klimy", u.user.email, chybaSmi?.message ?? "");
+    return odpoved({ chyba: "Účet nemá přístup do Klima postupů" }, 403);
+  }
 
   if (akce !== "rozdel") return odpoved({ chyba: `Neznámá akce „${akce}“` }, 400);
 

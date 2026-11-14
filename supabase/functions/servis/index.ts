@@ -130,31 +130,42 @@ async function sha256(text: string): Promise<string> {
   return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// aktivní účet podle ID (null = neexistuje / neschválený)
-async function aktivniUcet(id: string | undefined | null): Promise<string | null> {
+// Přístup podle appky: profily.aplikace musí obsahovat aspoň jednu z povolených
+// (zápis záznamu jen "servis"; přepis pole i "klima" – používá ho appka Klima postupy)
+const PRO_ZAPIS = ["servis"];
+const PRO_PREPIS = ["servis", "klima"];
+
+function maPristup(aplikace: unknown, povolene: string[]): boolean {
+  return Array.isArray(aplikace) && aplikace.some((a) => povolene.includes(String(a)));
+}
+
+// aktivní účet podle ID s přístupem do povolené appky (null = neexistuje / neschválený / bez přístupu)
+async function aktivniUcet(id: string | undefined | null, povolene: string[]): Promise<string | null> {
   if (!id) return null;
-  const { data, error } = await supabase.from("profily").select("id").eq("id", id).eq("aktivni", true).maybeSingle();
+  const { data, error } = await supabase.from("profily").select("id, aplikace").eq("id", id).eq("aktivni", true).maybeSingle();
   if (error) log("profil nenačten", error.message);
+  if (data && !maPristup(data.aplikace, povolene)) { log("odmítnuto – účet nemá přístup", { povolene }); return null; }
   return data?.id ?? null;
 }
 
 // přihlášení z appky (JWT)
-async function uzivatelZJwt(req: Request): Promise<string | null> {
+async function uzivatelZJwt(req: Request, povolene: string[]): Promise<string | null> {
   const jwt = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
   if (!jwt || jwt.split(".").length !== 3) return null;
   const { data, error } = await supabase.auth.getUser(jwt);
   if (error) { log("ověření přihlášení selhalo", error.message); return null; }
-  return await aktivniUcet(data.user?.id);
+  return await aktivniUcet(data.user?.id, povolene);
 }
 
-// token Siri zkratky – osobní (hash v profilu), nebo původní společný
+// token Siri zkratky – osobní (hash v profilu), nebo původní společný; jen pro zápis do Servisu
 async function uzivatelZTokenu(req: Request): Promise<string | null> {
   const token = (req.headers.get("x-zkratka-token") ?? "").trim();
   if (token.length < 20) return null;
-  if (SHORTCUT_TOKEN && token === SHORTCUT_TOKEN) return await aktivniUcet(OWNER_USER_ID);
-  const { data, error } = await supabase.from("profily").select("id")
+  if (SHORTCUT_TOKEN && token === SHORTCUT_TOKEN) return await aktivniUcet(OWNER_USER_ID, PRO_ZAPIS);
+  const { data, error } = await supabase.from("profily").select("id, aplikace")
     .eq("token_hash", await sha256(token)).eq("aktivni", true).maybeSingle();
   if (error) log("token – chyba čtení", error.message);
+  if (data && !maPristup(data.aplikace, PRO_ZAPIS)) { log("odmítnuto – token bez přístupu do Servisu"); return null; }
   return data?.id ?? null;
 }
 
@@ -713,7 +724,7 @@ Deno.serve(async (req) => {
   // mikrofon v appce – ověření přihlášením, ne tokenem zkratky
   if (akce === "prepis") {
     try {
-      if (!(await uzivatelZJwt(req))) return odpovedJson({ chyba: "Nejsi přihlášený nebo účet není schválený." }, 401);
+      if (!(await uzivatelZJwt(req, PRO_PREPIS))) return odpovedJson({ chyba: "Nejsi přihlášený, účet není schválený nebo nemá přístup." }, 401);
       return await prepisPole(req);
     } catch (e) {
       log("CHYBA přepisu", String(e));
@@ -721,7 +732,7 @@ Deno.serve(async (req) => {
     }
   }
 
-  const userId = (await uzivatelZTokenu(req)) ?? (await uzivatelZJwt(req));
+  const userId = (await uzivatelZTokenu(req)) ?? (await uzivatelZJwt(req, PRO_ZAPIS));
   if (!userId) {
     log("odmítnuto – neplatný token nebo neschválený účet");
     return odpoved("Neplatný přístupový token.", 401);
