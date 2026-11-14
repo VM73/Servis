@@ -25,6 +25,7 @@ Mobilní PWA pro HVAC techniky: záznamy ze servisních výjezdů a montáží, 
 - Technici s celým jménem.
 
 ## Pravidla
+- **Dopad na náklady a limity:** u každé úpravy předem zvážit a v souhrnu oznámit dopad na Claude (tokeny), GitHub (Actions minuty, Pages), Supabase (DB, Storage, Edge Functions – free tier), OpenAI/Anthropic API (cena za volání). Když se nic nemění, napsat „bez dopadu“.
 - Nejjednodušší řešení, měnit jen to, co úkol vyžaduje (chirurgické změny, cílené záměny v `index.html`, ne přepis souboru).
 - UI česky, iOS vzhled, použitelné od 320 px, Android i iPhone.
 - Diagnostika: `?debug=1` zapne podrobný výpis (přihlášení, chyby), číslo verze viditelné v Nastavení.
