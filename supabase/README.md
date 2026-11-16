@@ -10,7 +10,7 @@ Proto je jeho záloha celá tady, i pro Klimu, Kuchařku a Kalibraci.
 | `functions/servis/index.ts` | Edge Function `servis` – diktát ze Siri zkratky, přepis pole, cesta zpět (OpenAI) |
 | `functions/klima/index.ts` | Edge Function `klima` – rozdělení nadiktovaného postupu do kroků |
 | `functions/kucharka/index.ts` | Edge Function `kucharka` – přepis receptu z fotek (Claude / OpenAI) |
-| `migrations/` | změny DB po snímku (spouštět ručně v SQL Editoru) |
+| `migrations/` | změny DB po snímku (spouštět přes konektor Supabase po Vladanově souhlasu, bez konektoru v SQL Editoru) |
 
 Snímek stažen 2026-11-14 čtením přes konektor Supabase – v Supabase se nic neměnilo.
 Kód funkcí je přepsán z výpisu konektoru; před prvním nasazením z repa ho porovnej
@@ -21,6 +21,6 @@ OWNER_USER_ID, …) jsou jen v Supabase → Edge Functions → Secrets.
 
 ## Pravidlo pro další změny
 1. Změnu databáze napsat jako nový soubor `migrations/RRRRMMDDHHMM_popis.sql`.
-2. Spustit v Supabase (SQL Editor) a ověřit druhým uživatelem (RLS).
+2. Spustit přes konektor Supabase (po Vladanově souhlasu; bez konektoru v SQL Editoru) a ověřit druhým uživatelem (RLS).
 3. Obnovit `schema.sql` (nechat Clauda stáhnout znovu).
 4. Změnu Edge Function nejdřív v repu, pak nasadit – ne naopak.
