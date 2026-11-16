@@ -1,8 +1,8 @@
 # supabase/ – záloha sdíleného projektu
 
-Supabase projekt **servisní záznamy** (`pqehuuamgecmdmrdhmza`) sdílí tři appky:
-Servisní záznamy (toto repo), Klima postupy (VM73/Klima) a Kuchařka.
-Proto je jeho záloha celá tady, i pro Klimu a Kuchařku.
+Supabase projekt **servisní záznamy** (`pqehuuamgecmdmrdhmza`) sdílí čtyři appky:
+Servisní záznamy (toto repo), Klima postupy (VM73/Klima), Kuchařka a Kalibrace (vlastní schéma `kalibrace`).
+Proto je jeho záloha celá tady, i pro Klimu, Kuchařku a Kalibraci.
 
 | Soubor | Co obsahuje |
 |---|---|
@@ -10,6 +10,7 @@ Proto je jeho záloha celá tady, i pro Klimu a Kuchařku.
 | `functions/servis/index.ts` | Edge Function `servis` – diktát ze Siri zkratky, přepis pole, cesta zpět (OpenAI) |
 | `functions/klima/index.ts` | Edge Function `klima` – rozdělení nadiktovaného postupu do kroků |
 | `functions/kucharka/index.ts` | Edge Function `kucharka` – přepis receptu z fotek (Claude / OpenAI) |
+| `migrations/` | změny DB po snímku (spouštět ručně v SQL Editoru) |
 
 Snímek stažen 2026-11-14 čtením přes konektor Supabase – v Supabase se nic neměnilo.
 Kód funkcí je přepsán z výpisu konektoru; před prvním nasazením z repa ho porovnej

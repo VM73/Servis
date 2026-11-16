@@ -14,8 +14,8 @@ Mobilní PWA pro HVAC techniky: záznamy ze servisních výjezdů a montáží, 
 - Nasazení: soubory do kořene repa → GitHub Pages. Při každé změně zvýšit číslo verze v `index.html` **i** `CACHE` v `sw.js`.
 
 ## Sdílený Supabase projekt
-- Projekt `pqehuuamgecmdmrdhmza` sdílí 3 appky: Servis, Klima postupy (repo VM73/Klima), Kuchařka.
-- Přístup podle appky: `profily.aplikace` (pole hodnot `servis` / `klima` / `kucharka`). RLS každé tabulky musí kontrolovat svou appku, ne jen `aktivni`.
+- Projekt `pqehuuamgecmdmrdhmza` sdílí 4 appky: Servis, Klima postupy (repo VM73/Klima), Kuchařka, Kalibrace (schéma `kalibrace`, aplikace `kalibrace`).
+- Přístup podle appky: `profily.aplikace` (pole hodnot `servis` / `klima` / `kucharka` / `kalibrace`). RLS každé tabulky musí kontrolovat svou appku, ne jen `aktivni`.
 - Tabulky této appky: `zaznamy`, `technici`, `profily`; Storage `fotky`, `nahravky`. RPC: `nastav_muj_token`, `prejmenuj_technika`.
 
 ## Data
@@ -51,4 +51,4 @@ Mobilní PWA pro HVAC techniky: záznamy ze servisních výjezdů a montáží, 
 
 ## Neměnit
 - Strukturu tabulek a RLS bez SQL migrace a otestování druhým uživatelem.
-- Publishable key a URL Supabase (sdílí je i Klima a Kuchařka).
+- Publishable key a URL Supabase (sdílí je i Klima, Kuchařka a Kalibrace).

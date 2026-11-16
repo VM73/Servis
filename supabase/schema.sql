@@ -1,7 +1,7 @@
 -- =====================================================================
 -- Supabase projekt "servisní záznamy" (ref pqehuuamgecmdmrdhmza)
--- Sdílený projekt: Servisní záznamy, Klima postupy, Kuchařka.
--- Snímek schématu stažený 2026-11-14 (jen čtení, nic nebylo změněno).
+-- Sdílený projekt: Servisní záznamy, Klima postupy, Kuchařka, Kalibrace.
+-- Snímek schématu stažený 2026-11-14, doplněn o schéma kalibrace 2026-11-16 (jen čtení, nic nebylo změněno).
 -- Slouží jako záloha a zdroj pravdy; změny dělat novou migrací
 -- v supabase/migrations/ a tento soubor pak obnovit.
 -- Neobsahuje data ani klíče.
@@ -10,6 +10,7 @@
 -- ---------- Rozšíření ----------
 create extension if not exists pg_trgm with schema extensions;
 create extension if not exists unaccent with schema extensions;
+create extension if not exists pgcrypto with schema extensions;
 
 -- =====================================================================
 -- SERVIS (servisní záznamy)
@@ -517,3 +518,173 @@ create policy "kucharka upravuje" on storage.objects as PERMISSIVE for UPDATE to
   using (((bucket_id = ANY (ARRAY['stranky'::text, 'pokrmy'::text])) AND je_clen()));
 create policy "kucharka maze" on storage.objects as PERMISSIVE for DELETE to authenticated
   using (((bucket_id = ANY (ARRAY['stranky'::text, 'pokrmy'::text])) AND je_clen()));
+
+-- =====================================================================
+-- KALIBRACE (vlastní schéma kalibrace, přibylo 2026-11-14 večer)
+-- Přístup: aktivní profil s 'kalibrace' v profily.aplikace (kalibrace.smi()),
+-- každý vidí jen své řádky (owner).
+-- =====================================================================
+create schema if not exists kalibrace;
+grant usage on schema kalibrace to authenticated, anon;
+
+create table kalibrace.skupiny (
+  id uuid not null default gen_random_uuid(),
+  owner uuid not null default auth.uid(),
+  nazev text not null,
+  typ text not null default 'jiny'::text,
+  min_platnych integer not null default 1,
+  poradi integer not null default 0,
+  created_at timestamp with time zone not null default now(),
+  vsechny_platne boolean not null default false
+);
+alter table kalibrace.skupiny add constraint skupiny_pkey PRIMARY KEY (id);
+alter table kalibrace.skupiny add constraint skupiny_id_owner_key UNIQUE (id, owner);
+alter table kalibrace.skupiny add constraint skupiny_owner_fkey FOREIGN KEY (owner) REFERENCES auth.users(id) ON DELETE CASCADE;
+alter table kalibrace.skupiny add constraint skupiny_nazev_check CHECK ((length(btrim(nazev)) > 0));
+alter table kalibrace.skupiny add constraint skupiny_min_platnych_check CHECK ((min_platnych >= 1));
+alter table kalibrace.skupiny add constraint skupiny_typ_check CHECK ((typ = ANY (ARRAY['anemometr'::text, 'balometr'::text, 'detektor_uniku'::text, 'dif_manometr'::text, 'jiny'::text])));
+CREATE INDEX skupiny_owner_idx ON kalibrace.skupiny USING btree (owner, poradi);
+
+create table kalibrace.pristroje (
+  id uuid not null default gen_random_uuid(),
+  owner uuid not null default auth.uid(),
+  skupina_id uuid not null,
+  vyrobce text not null default ''::text,
+  model text not null,
+  vyrobni_cislo text not null,
+  technik text not null default ''::text,
+  interval_mesicu integer not null default 12,
+  doba_v_lab_dni integer not null default 14,
+  predstih_dni integer,
+  stav text not null default 'aktivni'::text,
+  odeslano_dne date,
+  ocekavany_navrat date,
+  foto_path text,
+  poznamka text not null default ''::text,
+  created_at timestamp with time zone not null default now()
+);
+alter table kalibrace.pristroje add constraint pristroje_pkey PRIMARY KEY (id);
+alter table kalibrace.pristroje add constraint pristroje_id_owner_key UNIQUE (id, owner);
+alter table kalibrace.pristroje add constraint pristroje_owner_vyrobni_cislo_key UNIQUE (owner, vyrobni_cislo);
+alter table kalibrace.pristroje add constraint pristroje_owner_fkey FOREIGN KEY (owner) REFERENCES auth.users(id) ON DELETE CASCADE;
+alter table kalibrace.pristroje add constraint pristroje_skupina_id_owner_fkey FOREIGN KEY (skupina_id, owner) REFERENCES kalibrace.skupiny(id, owner) ON DELETE RESTRICT;
+alter table kalibrace.pristroje add constraint pristroje_model_check CHECK ((length(btrim(model)) > 0));
+alter table kalibrace.pristroje add constraint pristroje_vyrobni_cislo_check CHECK ((length(btrim(vyrobni_cislo)) > 0));
+alter table kalibrace.pristroje add constraint pristroje_interval_mesicu_check CHECK (((interval_mesicu >= 1) AND (interval_mesicu <= 120)));
+alter table kalibrace.pristroje add constraint pristroje_doba_v_lab_dni_check CHECK (((doba_v_lab_dni >= 0) AND (doba_v_lab_dni <= 365)));
+alter table kalibrace.pristroje add constraint pristroje_predstih_dni_check CHECK (((predstih_dni >= 0) AND (predstih_dni <= 365)));
+alter table kalibrace.pristroje add constraint pristroje_stav_check CHECK ((stav = ANY (ARRAY['aktivni'::text, 'na_kalibraci'::text, 'vyrazeno'::text])));
+CREATE INDEX pristroje_skupina_idx ON kalibrace.pristroje USING btree (skupina_id, owner);
+
+create table kalibrace.kalibrace (
+  id uuid not null default gen_random_uuid(),
+  owner uuid not null default auth.uid(),
+  pristroj_id uuid not null,
+  datum_kalibrace date not null,
+  platnost_do date not null,
+  laborator text not null default ''::text,
+  cislo_protokolu text not null default ''::text,
+  protokol_path text,
+  cena numeric(12,2),
+  poznamka text not null default ''::text,
+  created_at timestamp with time zone not null default now()
+);
+alter table kalibrace.kalibrace add constraint kalibrace_pkey PRIMARY KEY (id);
+alter table kalibrace.kalibrace add constraint kalibrace_owner_fkey FOREIGN KEY (owner) REFERENCES auth.users(id) ON DELETE CASCADE;
+alter table kalibrace.kalibrace add constraint kalibrace_pristroj_id_owner_fkey FOREIGN KEY (pristroj_id, owner) REFERENCES kalibrace.pristroje(id, owner) ON DELETE CASCADE;
+alter table kalibrace.kalibrace add constraint kalibrace_cena_check CHECK ((cena >= (0)::numeric));
+alter table kalibrace.kalibrace add constraint kalibrace_check CHECK ((platnost_do >= datum_kalibrace));
+CREATE INDEX kalibrace_owner_idx ON kalibrace.kalibrace USING btree (owner);
+CREATE INDEX kalibrace_pristroj_idx ON kalibrace.kalibrace USING btree (pristroj_id, owner, datum_kalibrace DESC);
+
+create table kalibrace.nastaveni (
+  owner uuid not null default auth.uid(),
+  email_upozorneni text,
+  predstih_dni_vychozi integer not null default 30,
+  token_hash text
+);
+alter table kalibrace.nastaveni add constraint nastaveni_pkey PRIMARY KEY (owner);
+alter table kalibrace.nastaveni add constraint nastaveni_token_hash_key UNIQUE (token_hash);
+alter table kalibrace.nastaveni add constraint nastaveni_owner_fkey FOREIGN KEY (owner) REFERENCES auth.users(id) ON DELETE CASCADE;
+alter table kalibrace.nastaveni add constraint nastaveni_token_hash_check CHECK ((token_hash ~ '^[0-9a-f]{64}$'::text));
+alter table kalibrace.nastaveni add constraint nastaveni_predstih_dni_vychozi_check CHECK (((predstih_dni_vychozi >= 0) AND (predstih_dni_vychozi <= 365)));
+
+-- Funkce (digest z pgcrypto ve schématu extensions)
+
+CREATE OR REPLACE FUNCTION kalibrace.smi()
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  select exists (select 1 from public.profily
+    where id = (select auth.uid()) and aktivni and 'kalibrace' = any(aplikace));
+$function$;
+
+-- Data pro upozornění (volá se bez přihlášení, chráněno tokenem z kalibrace.nastaveni)
+CREATE OR REPLACE FUNCTION kalibrace.upozorneni_data(token text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  vlastnik uuid;
+begin
+  select n.owner into vlastnik
+    from kalibrace.nastaveni n join public.profily p on p.id = n.owner
+   where n.token_hash = encode(extensions.digest(coalesce(token, ''), 'sha256'), 'hex')
+     and p.aktivni and 'kalibrace' = any(p.aplikace);
+  if vlastnik is null then
+    raise exception 'neplatný token' using errcode = '28000';
+  end if;
+  return jsonb_build_object(
+    'nastaveni', (select jsonb_build_object('email_upozorneni', n.email_upozorneni, 'predstih_dni_vychozi', n.predstih_dni_vychozi)
+                    from kalibrace.nastaveni n where n.owner = vlastnik),
+    'skupiny',   (select coalesce(jsonb_agg(to_jsonb(s) order by s.poradi), '[]'::jsonb) from kalibrace.skupiny s where s.owner = vlastnik),
+    'pristroje', (select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) from kalibrace.pristroje x where x.owner = vlastnik),
+    'kalibrace', (select coalesce(jsonb_agg(to_jsonb(k)), '[]'::jsonb) from kalibrace.kalibrace k where k.owner = vlastnik)
+  );
+end;
+$function$;
+
+-- Práva (stav v DB: tabulky jen authenticated, smi jen authenticated, upozorneni_data jen anon)
+revoke all on all tables in schema kalibrace from public, anon;
+grant select, insert, update, delete on all tables in schema kalibrace to authenticated;
+revoke execute on all functions in schema kalibrace from public;
+grant execute on function kalibrace.smi() to authenticated;
+grant execute on function kalibrace.upozorneni_data(text) to anon;
+
+-- RLS
+alter table kalibrace.skupiny enable row level security;
+alter table kalibrace.pristroje enable row level security;
+alter table kalibrace.kalibrace enable row level security;
+alter table kalibrace.nastaveni enable row level security;
+-- stejná politika "vlastni" pro skupiny, pristroje, kalibrace, nastaveni
+create policy vlastni on kalibrace.skupiny as PERMISSIVE for ALL to authenticated
+  using (((owner = ( SELECT auth.uid() AS uid)) AND ( SELECT kalibrace.smi() AS smi)))
+  with check (((owner = ( SELECT auth.uid() AS uid)) AND ( SELECT kalibrace.smi() AS smi)));
+create policy vlastni on kalibrace.pristroje as PERMISSIVE for ALL to authenticated
+  using (((owner = ( SELECT auth.uid() AS uid)) AND ( SELECT kalibrace.smi() AS smi)))
+  with check (((owner = ( SELECT auth.uid() AS uid)) AND ( SELECT kalibrace.smi() AS smi)));
+create policy vlastni on kalibrace.kalibrace as PERMISSIVE for ALL to authenticated
+  using (((owner = ( SELECT auth.uid() AS uid)) AND ( SELECT kalibrace.smi() AS smi)))
+  with check (((owner = ( SELECT auth.uid() AS uid)) AND ( SELECT kalibrace.smi() AS smi)));
+create policy vlastni on kalibrace.nastaveni as PERMISSIVE for ALL to authenticated
+  using (((owner = ( SELECT auth.uid() AS uid)) AND ( SELECT kalibrace.smi() AS smi)))
+  with check (((owner = ( SELECT auth.uid() AS uid)) AND ( SELECT kalibrace.smi() AS smi)));
+
+-- Storage: soubory ve složce <user_id>/…
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  values ('kalibrace-fotky', 'kalibrace-fotky', false, 1048576, '{image/jpeg}');
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  values ('kalibrace-protokoly', 'kalibrace-protokoly', false, 10485760, '{application/pdf,image/jpeg,image/png,image/heic}');
+create policy "kalibrace - cteni souboru" on storage.objects as PERMISSIVE for SELECT to authenticated
+  using (((bucket_id = ANY (ARRAY['kalibrace-protokoly'::text, 'kalibrace-fotky'::text])) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text) AND ( SELECT kalibrace.smi() AS smi)));
+create policy "kalibrace - nahrani souboru" on storage.objects as PERMISSIVE for INSERT to authenticated
+  with check (((bucket_id = ANY (ARRAY['kalibrace-protokoly'::text, 'kalibrace-fotky'::text])) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text) AND ( SELECT kalibrace.smi() AS smi)));
+create policy "kalibrace - zmena souboru" on storage.objects as PERMISSIVE for UPDATE to authenticated
+  using (((bucket_id = ANY (ARRAY['kalibrace-protokoly'::text, 'kalibrace-fotky'::text])) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text) AND ( SELECT kalibrace.smi() AS smi)))
+  with check (((bucket_id = ANY (ARRAY['kalibrace-protokoly'::text, 'kalibrace-fotky'::text])) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text) AND ( SELECT kalibrace.smi() AS smi)));
+create policy "kalibrace - mazani souboru" on storage.objects as PERMISSIVE for DELETE to authenticated
+  using (((bucket_id = ANY (ARRAY['kalibrace-protokoly'::text, 'kalibrace-fotky'::text])) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text) AND ( SELECT kalibrace.smi() AS smi)));
