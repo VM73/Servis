@@ -1,5 +1,6 @@
 -- 2026-11-16: odebrat nepřihlášeným (anon) právo volat SECURITY DEFINER funkce přes /rest/v1/rpc
 -- Důvod: advisor 0028 „Public Can Execute SECURITY DEFINER Function“ (týdenní kontrola).
+-- STAV: spuštěno 2026-11-16 přes konektor Supabase (migrace revoke_anon_security_definer), ověřeno.
 -- Všechny RLS politiky v projektu jsou jen "to authenticated", appky volají RPC až po přihlášení
 -- (Servis: nastav_muj_token, prejmenuj_technika; Edge Function klima: klima_smi s JWT uživatele).
 -- Nemění: kalibrace.upozorneni_data (záměrně anon, chráněno tokenem), funkce SECURITY INVOKER.
